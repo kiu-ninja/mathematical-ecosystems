@@ -18,8 +18,8 @@ protected:
 
         InitWindow(app_data.width, app_data.height, name);
 
-        SetTargetFPS(60);
-        // SetTargetFPS(120);
+        // SetTargetFPS(60);
+        SetTargetFPS(120);
         // SetTargetFPS(300);
     };
 

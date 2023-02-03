@@ -13,12 +13,7 @@ struct Circle {
 Rectangle centered_padded_rectangle(const Rectangle &rect, const float &padding) {
     float w = rect.width - padding * 2;
     float h = rect.height - padding * 2;
-    return Rectangle {
-        rect.x - w / 2,
-        rect.y - h / 2,
-        w,
-        h
-    };
+    return Rectangle { rect.x - w / 2, rect.y - h / 2, w, h };
 }
 
 Circle get_rectangle_occluding_circle_offset(const Rectangle &rect, const Vector2 &circle_offset, const float &t) {
@@ -58,7 +53,7 @@ namespace Drawable {
             return this;
         }
 
-        DrawableTransformScene* set_target(const Data &_target) {
+        DrawableTransformScene* set_target(const Data _target) {
             target = _target;
             return this;
         }
@@ -164,7 +159,7 @@ namespace Drawable {
 
     struct Rect: public Drawable {
         Vector2 circle_offset;
-        float t = 0;
+        float visibility = 0;
 
         Rect() {}
         Rect(const Rectangle &rect) : Drawable(Vector2{rect.x, rect.y}, Vector2{rect.width, rect.height}) {
@@ -184,27 +179,16 @@ namespace Drawable {
         Circle get_occluder() {
             return get_rectangle_occluding_circle_offset(Rectangle {
                 position.x, position.y, dimensions.x, dimensions.y
-            }, circle_offset, t);
+            }, circle_offset, visibility);
         }
     };
 
-    struct GridCell: public Drawable {
-        Vector2 circle_offset;
+    struct GridCell: public Rect {
         Color stroke_col = WHITE;
         Color fill_col = WHITE;
-        float t = 0;
         float alive = 0;
 
-        GridCell() {}
-        GridCell(const Rectangle &rect) : Drawable(Vector2{rect.x, rect.y}, Vector2{rect.width, rect.height}) {
-            circle_offset = Vector2 { randf(), randf() };
-        }
-
-        Rectangle get_rect_padded(float padding) {
-            return centered_padded_rectangle(Rectangle {
-                position.x, position.y, dimensions.x, dimensions.y
-            }, padding);
-        }
+        using Rect::Rect;
 
         Rectangle get_stroke_rect() {
             return get_rect_padded(0);
@@ -221,7 +205,7 @@ namespace Drawable {
                 stroke_col.r,
                 stroke_col.g,
                 stroke_col.b,
-                (unsigned char)(255 * t)
+                (unsigned char)(255 * visibility)
             };
         }
 
@@ -230,14 +214,8 @@ namespace Drawable {
                 fill_col.r,
                 fill_col.g,
                 fill_col.b,
-                (unsigned char)(255 * alive * t)
+                (unsigned char)(255 * alive * visibility)
             };
-        }
-
-        Circle get_occluder() {
-            return get_rectangle_occluding_circle_offset(Rectangle {
-                position.x, position.y, dimensions.x, dimensions.y
-            }, circle_offset, t);
         }
 
         template<typename S>
@@ -258,16 +236,32 @@ namespace Drawable {
 
             return res;
         }
+
+        template<typename S>
+        static Scene<S>* animate_visibility(GridCell* object, const float &new_visibility) {
+            struct AnimateVisibility: public DrawableTransformScene<S, float> { using DrawableTransformScene<S, float>::DrawableTransformScene;
+                void start() {
+                    this->initial = ((GridCell *)this->object)->visibility;
+                }
+
+                void update_state(const float &t) {
+                    ((GridCell *)this->object)->visibility = Easing::cubic(this->initial, this->target, t);
+                }
+            };
+
+            AnimateVisibility* res = new AnimateVisibility(1.0f);
+            res->set_object(object);
+            res->set_target(new_visibility);
+
+            return res;
+        }
     };
 
-
-    class String {
-    private:
+    struct String: public Drawable {
         std::string text;
 
         int width, height;
 
-    public:
         Font font;
         int font_size;
         float t = 0;
@@ -301,6 +295,28 @@ namespace Drawable {
 
         Vector2 get_pos_centered_at(const Vector2 &center) {
             return center - Vector2 { (float)width * font_size / 4, (float)height * font_size / 2 };
+        }
+
+        template<typename S>
+        Scene<S>* write(const std::string &target_text) {
+            struct AnimateAlive: public DrawableTransformScene<S, std::string> { using DrawableTransformScene<S, std::string>::DrawableTransformScene;
+                void start() {
+                    std::cout << "TARGET TEXT: " << this->target << "\n";
+                    ((String *)this->object)->update_text(this->target);
+                    ((String *)this->object)->t = 0;
+                }
+
+                void update_state(const float &t) {
+                    ((String *)this->object)->t = Easing::cubic(0, 1, t);
+                }
+            };
+
+            AnimateAlive* res = new AnimateAlive(1.0f);
+            res->set_target(target_text);
+            res->set_object(this);
+            ((Scene<S>*)res)->set_duration(target_text.size() / 10.0f);
+
+            return res;
         }
     };
 };
