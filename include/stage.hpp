@@ -1,7 +1,7 @@
+#pragma once
 #include <iostream>
 #include <vector>
 #include "application.hpp"
-
 
 /*
 ```
@@ -26,6 +26,7 @@ struct ExampleScene: public Scene<ExampleState> { using Scene::Scene;
 }
 ```
 */
+
 template <typename S> struct Scene {
     S initial_state;
     
@@ -53,11 +54,12 @@ template <typename S> struct Scene {
         }
     }
     
-    void _start(const ApplicationData &_app_data, const S state) {
+    void _start(const ApplicationData &_app_data, S &state) {
         initial_state = state;
         app_data = _app_data;
 
         start();
+        start(state);
     };
 
     Scene<S>* after(Scene<S>* other) {
@@ -81,15 +83,19 @@ template <typename S> struct Scene {
     }
 
     virtual void update_state(S &state, const float &t) {
-        std::cout << "update_state() NOT IMPLEMENTED\n";
+        // std::cout << "update_state() NOT IMPLEMENTED\n";
+    };
+
+    virtual void update_state(const float &t) {
+        // std::cout << "update_state() NOT IMPLEMENTED\n";
     };
 
     virtual void start(S &state) {
-        std::cout << "start() NOT IMPLEMENTED\n";
+        // std::cout << "start() NOT IMPLEMENTED\n";
     }
 
     virtual void start() {
-        std::cout << "start() NOT IMPLEMENTED\n";
+        // std::cout << "start() NOT IMPLEMENTED\n";
     }
 };
 
@@ -116,16 +122,31 @@ public:
         for (Scene<S>* s : scenes) {
             if (s->start_frame == current_frame) {
                 s->_start(app_data, state);
-                s->start(state);
             }
 
             if (s->start_frame <= current_frame && current_frame - s->start_frame < s->duration_frames) {
                 s->update_state(state, (float)(current_frame - s->start_frame) / (s->duration_frames - 1));
+                s->update_state((float)(current_frame - s->start_frame) / (s->duration_frames - 1));
             }
         }
 
         current_frame++;
         background_update();
+    }
+
+    std::vector<Scene<S>*> add_scenes_after_last(const std::vector<Scene<S>*> &_scenes) {
+        Scene<S>* last = last_scene();
+        for (Scene<S>* scene : _scenes) {
+            add_scene(scene->after(last))->set_duration(last->duration_frames / 60);
+        }
+        return _scenes;
+    }
+
+    std::vector<Scene<S>*> add_scenes_with_last(const std::vector<Scene<S>*> &_scenes) {
+        for (Scene<S>* scene : _scenes) {
+            add_scene_with_last(scene)->set_duration(last_scene()->duration_frames / 60);
+        }
+        return _scenes;
     }
 
     Scene<S>* add_scene_after_last(Scene<S>* scene) {
@@ -134,7 +155,6 @@ public:
     }
 
     Scene<S>* add_scene_with_last(Scene<S>* scene) {
-        scene->duration_frames = last_scene()->duration_frames;
         add_scene(scene->with(last_scene()));
         return scene;
     }

@@ -6,43 +6,31 @@
 #include "drawing_functions.hpp"
 
 struct ConwaysState {
-    DrawableRectangle a_cell;
-    unsigned char a_cell_fill_alpha = 0;
+    std::vector<Drawable::GridCell*> cells;
 
-    DrawableRectangle neighbors[8];
-    bool neighbor_states[8];
-    unsigned char neighbor_states_fill_alpha[8];
-
-    DrawableString text;
+    Drawable::String text;
     
     ConwaysState() {}
     ConwaysState(const ApplicationData &app_data) {
         float w = app_data.width, h = app_data.height;
-        a_cell = DrawableRectangle(
+        cells.push_back(new Drawable::GridCell(
             Rectangle { w / 2, h / 2, h / 3 - 20, h / 3 - 20 }
-        );
-        int count = 0;
+        ));
         for (int j = -1; j <= 1; j++) {
             for (int i = -1; i <= 1; i++) {
                 if (!(i == 0 && j == 0)) {
-                    neighbors[count] = DrawableRectangle(
+                    cells.push_back(new Drawable::GridCell(
                         Rectangle { 
                             w / 2 + i * h / 3, 
                             h / 2 + j * h / 3, 
                             h / 3 - 20,
                             h / 3 - 20
                         }
-                    );
-                    neighbor_states[count] = false;
-                    neighbor_states_fill_alpha[count] = 0;
-                    count++;
+                    ));
                 }
             }
         }
 
-        neighbor_states[0] = true;
-        neighbor_states[1] = true;
-        neighbor_states[4] = true;
     }
 };
 
@@ -62,58 +50,42 @@ struct WriteText: public Scene<ConwaysState> { using Scene::Scene;
     }
 };
 
-WriteText* write_text(const std::string &target_text) {
+Scene<ConwaysState>* write_text(const std::string &target_text) {
     WriteText* res = new WriteText(1); 
     res->set_target_text(target_text);
-    return res;
+    return res->set_duration(target_text.size() / 10.0f);
 }
 
 namespace Scenes {
     struct ShowInitialCell: public Scene<ConwaysState> { using Scene::Scene;
         void update_state(ConwaysState &s, const float &t) {
-            s.a_cell.t = Easing::cubic_cubic(0, 1, t);
+            s.cells[0]->t = Easing::cubic_cubic(0, 1, t);
         }
     };
 
     struct MakeCellAlive: public Scene<ConwaysState> { using Scene::Scene;
         void update_state(ConwaysState &s, const float &t) {
-            s.a_cell_fill_alpha = Easing::cubic_cubic(0, 255, t);
+            s.cells[0]->alive = Easing::cubic_cubic(0, 1, t);
         }
     };
 
     struct MakeCellDead: public Scene<ConwaysState> { using Scene::Scene;
         void update_state(ConwaysState &s, const float &t) {
-            s.a_cell_fill_alpha = Easing::cubic_cubic(255, 0, t);
+            s.cells[0]->alive = Easing::cubic_cubic(1, 0, t);
         }
     };
 
-    struct ShowNeighbors: public Scene<ConwaysState> { using Scene::Scene;
-        void update_state(ConwaysState &s, const float &t) {
-            for (int i = 0; i < 8; i++) {
-                s.neighbors[i].t = Easing::cubic_cubic(0, 1, t);
-            }
+    struct ToggleNeighborVisibility: public Scene<ConwaysState> { using Scene::Scene;
+        float target;
+        
+        void start() {
+            target = (initial_state.cells[1]->t > 0.5f) ? 0.0f : 1.0f;
         }
-    };
 
-    struct HideNeighbors: public Scene<ConwaysState> { using Scene::Scene;
         void update_state(ConwaysState &s, const float &t) {
-            for (int i = 0; i < 8; i++) {
-                s.neighbors[i].t = Easing::cubic_cubic(1, 0, t);
+            for (int i = 1; i < 9; i++) {
+                s.cells[i]->t = Easing::cubic_cubic(1.0f - target, target, t);
             }
-        }
-    };
-
-    struct TransformCells: public Scene<ConwaysState> { using Scene::Scene;
-        void update_state(ConwaysState &s, const float &t) {
-            for (int i = 0; i < 8; i++) {
-                s.neighbors[i].rect.x = Easing::cubic_cubic(initial_state.neighbors[i].rect.x, app_data.width / 2 + (initial_state.neighbors[i].rect.x - app_data.width / 2) * 0.5, t);
-                s.neighbors[i].rect.y = Easing::cubic_cubic(initial_state.neighbors[i].rect.y, (app_data.height / 2 + (initial_state.neighbors[i].rect.y - app_data.height / 2) / 2) - 50, t);
-                s.neighbors[i].rect.width = Easing::cubic_cubic(initial_state.neighbors[i].rect.width, initial_state.neighbors[i].rect.width / 2, t);
-                s.neighbors[i].rect.height = Easing::cubic_cubic(initial_state.neighbors[i].rect.height, initial_state.neighbors[i].rect.height / 2, t);
-            }
-            s.a_cell.rect.width = Easing::cubic_cubic(initial_state.a_cell.rect.width, initial_state.a_cell.rect.width / 2, t);
-            s.a_cell.rect.height = Easing::cubic_cubic(initial_state.a_cell.rect.height, initial_state.a_cell.rect.height / 2, t);
-            s.a_cell.rect.y = Easing::cubic_cubic(initial_state.a_cell.rect.y, initial_state.a_cell.rect.y - 50, t);
         }
     };
 
@@ -127,10 +99,10 @@ namespace Scenes {
         }
 
         void update_state(ConwaysState &s, const float &t) {
-            for (int i = 0; i < 8; i++) {
-                float t_i = clamp(t - time_neighbor_states_fill_alpha[i], 0.0f, 0.5f) * 2;
-                s.neighbor_states_fill_alpha[i] = 255 * Easing::cubic_cubic(0, 1, t_i);
-            }
+            int inds[3] = {1, 2, 5};
+
+            for (int i : inds)
+                s.cells[i]->alive = Easing::cubic_cubic(0, 1, clamp(t - time_neighbor_states_fill_alpha[i], 0.0f, 0.5f) * 2);
         }
     };
 }
@@ -140,7 +112,7 @@ public:
     Conways() : Stage(1920 / 2, 1080 / 2, "Conways Game of Life") { };
 
     void scene_setup() {
-        add_scene(new Scenes::ShowInitialCell(1, 2.0f));
+        add_scene(new Scenes::ShowInitialCell(1, 1.0f));
 
         add_scene_after_last(write_text("This is a cell."))->set_duration(1.0f);
 
@@ -148,25 +120,26 @@ public:
         add_scene_with_last(write_text("Cells can be alive"));
 
         add_scene_after_last(new Scenes::MakeCellDead(1.0f))->wait(1.0f);
-        add_scene_with_last(write_text("... or dead."));
+        add_scene_with_last(write_text("... or dead.")->set_duration(1.f));
 
-        add_scene_after_last(new Scenes::TransformCells(1.0f))->wait(1.0f);
-        add_scene_after_last(new Scenes::ShowNeighbors(1.0f));
+        add_scene_after_last(new Scenes::ToggleNeighborVisibility(1.0f))->wait(1);
+        add_scenes_with_last(Drawable::scale_together<ConwaysState, Drawable::GridCell>(state.cells, Vector2{0.5f, 0.5f}));
+        add_scenes_with_last(Drawable::translate_together<ConwaysState, Drawable::GridCell>(state.cells, Vector2{0, (float)-app_data.height / 6}));
+        
         add_scene_with_last(write_text("Cells have neighbors"));
 
         add_scene_after_last(new Scenes::SomeAliveSomeDead(2.0f))->wait(1.0f);
         add_scene_with_last(write_text("some alive, some dead."));
 
-        add_scene_after_last(new Scenes::HideNeighbors(2.0f))->wait(1.0f);
-        add_scene_with_last(write_text("If the number of alive\nneighbors is exactly 3..."));
+        add_scene_after_last(write_text("If the number of alive\nneighbors is exactly 3..."))->wait(1.0f)->set_duration(3.0f);
+        add_scene_after_last(write_text("the cell will come alive."));
         add_scene_after_last(new Scenes::MakeCellAlive(2.0f))->wait(1.0f);
-        add_scene_with_last(write_text("... the cell comes alive."));
     }
 
     Font font;
-    int font_size = 40;
+    int font_size = 20;
     void state_setup() {
-        font = LoadFontEx("demo-font.otf", font_size, NULL, 0);
+        font = LoadFontEx("demo-font.otf", font_size * 20, NULL, 0);
         state.text.font = font;
         state.text.font_size = font_size;
     }
@@ -177,27 +150,26 @@ public:
     void draw() {
         ClearBackground(BLACK);
 
-        draw_rectangle_circle_bounded(state.a_cell.get_rect(), state.a_cell.get_occluder(), {255, 255, 255, (unsigned char)(255 - state.a_cell_fill_alpha)});
-
-        DrawRectangleRec(state.a_cell.get_rect_padded(3), {220, 255, 200, state.a_cell_fill_alpha});
+        for (int i = 0; i < 9; i++) {
+            draw_rectangle_circle_bounded(
+                state.cells[i]->get_stroke_rect(), 
+                state.cells[i]->get_occluder(), 
+                state.cells[i]->get_stroke_col()
+            );
+            DrawRectangleRec(
+                state.cells[i]->get_fill_rect(), 
+                state.cells[i]->get_fill_col()
+            );
+        }
 
         DrawTextEx(
             font, 
             state.text.get_string().c_str(), 
-            state.text.get_pos_centered_at({ (float)app_data.width / 2, (float)3 * app_data.height / 4 }), 
+            state.text.get_pos_centered_at({ (float)app_data.width / 2, (float)4 * app_data.height / 5 }), 
             font_size, 
             0, 
             WHITE
         );
-
-        for (int i = 0; i < 8; i++) {
-            draw_rectangle_circle_bounded(state.neighbors[i].get_rect(), state.neighbors[i].get_occluder(), {255, 255, 255, (unsigned char)(255 - state.neighbor_states_fill_alpha[i] * state.neighbor_states[i])});
-
-            if (state.neighbor_states[i]) {
-                Rectangle r = state.neighbors[i].get_rect_padded(3);
-                DrawRectangleRec(r, {220, 255, 200, state.neighbor_states_fill_alpha[i]});
-            }
-        }
     }
 }; 
 
