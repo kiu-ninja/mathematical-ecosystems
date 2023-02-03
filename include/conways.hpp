@@ -63,18 +63,6 @@ namespace Scenes {
         }
     };
 
-    struct MakeCellAlive: public Scene<ConwaysState> { using Scene::Scene;
-        void update_state(ConwaysState &s, const float &t) {
-            s.cells[0]->alive = Easing::cubic_cubic(0, 1, t);
-        }
-    };
-
-    struct MakeCellDead: public Scene<ConwaysState> { using Scene::Scene;
-        void update_state(ConwaysState &s, const float &t) {
-            s.cells[0]->alive = Easing::cubic_cubic(1, 0, t);
-        }
-    };
-
     struct ToggleNeighborVisibility: public Scene<ConwaysState> { using Scene::Scene;
         float target;
         
@@ -88,23 +76,6 @@ namespace Scenes {
             }
         }
     };
-
-    struct SomeAliveSomeDead: public Scene<ConwaysState> { using Scene::Scene;
-        float time_neighbor_states_fill_alpha[8];
-
-        void start() {
-            for (int i = 0; i < 8; i++) {
-                time_neighbor_states_fill_alpha[i] = randf() / 2;
-            }
-        }
-
-        void update_state(ConwaysState &s, const float &t) {
-            int inds[3] = {1, 2, 5};
-
-            for (int i : inds)
-                s.cells[i]->alive = Easing::cubic_cubic(0, 1, clamp(t - time_neighbor_states_fill_alpha[i], 0.0f, 0.5f) * 2);
-        }
-    };
 }
 
 class Conways: public Stage<ConwaysState> {
@@ -116,10 +87,10 @@ public:
 
         add_scene_after_last(write_text("This is a cell."))->set_duration(1.0f);
 
-        add_scene_after_last(new Scenes::MakeCellAlive(1.0f))->wait(1.0f);
+        add_scene_after_last(Drawable::GridCell::animate_alive<ConwaysState>(state.cells[0], 1))->wait(1.0f);
         add_scene_with_last(write_text("Cells can be alive"));
 
-        add_scene_after_last(new Scenes::MakeCellDead(1.0f))->wait(1.0f);
+        add_scene_after_last(Drawable::GridCell::animate_alive<ConwaysState>(state.cells[0], 0))->wait(1.0f);
         add_scene_with_last(write_text("... or dead.")->set_duration(1.f));
 
         add_scene_after_last(new Scenes::ToggleNeighborVisibility(1.0f))->wait(1);
@@ -128,12 +99,15 @@ public:
         
         add_scene_with_last(write_text("Cells have neighbors"));
 
-        add_scene_after_last(new Scenes::SomeAliveSomeDead(2.0f))->wait(1.0f);
+        // add_scene_after_last(new Scenes::SomeAliveSomeDead(2.0f))->wait(1.0f);
+        add_scene_after_last(Drawable::GridCell::animate_alive<ConwaysState>(state.cells[1], 1))->wait(1.0f);
+        add_scene_with_last(Drawable::GridCell::animate_alive<ConwaysState>(state.cells[2], 1));
+        add_scene_with_last(Drawable::GridCell::animate_alive<ConwaysState>(state.cells[5], 1));
         add_scene_with_last(write_text("some alive, some dead."));
 
-        add_scene_after_last(write_text("If the number of alive\nneighbors is exactly 3..."))->wait(1.0f)->set_duration(3.0f);
-        add_scene_after_last(write_text("the cell will come alive."));
-        add_scene_after_last(new Scenes::MakeCellAlive(2.0f))->wait(1.0f);
+        add_scene_after_last(write_text("If the number of alive\nneighbors is exactly 3..."))->wait(1.0f);
+        add_scene_after_last(write_text("the cell will come alive."))->wait(3.0f);
+        add_scene_after_last(Drawable::GridCell::animate_alive<ConwaysState>(state.cells[0], 1))->wait(1.0f);
     }
 
     Font font;

@@ -26,7 +26,6 @@ struct ExampleScene: public Scene<ExampleState> { using Scene::Scene;
 }
 ```
 */
-
 template <typename S> struct Scene {
     S initial_state;
     

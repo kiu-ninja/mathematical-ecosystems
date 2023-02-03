@@ -48,17 +48,17 @@ namespace Drawable {
         Drawable(Vector2 _position, Vector2 _dimensions) : position(_position), dimensions(_dimensions) {};
     };
 
-    template<typename S>
+    template<typename S, typename Data>
     struct DrawableTransformScene: public Scene<S> { using Scene<S>::Scene;
         Drawable* object;
-        Vector2 initial, target;
+        Data initial, target;
 
         DrawableTransformScene* set_object(Drawable* _object) {
             object = _object;
             return this;
         }
 
-        DrawableTransformScene* set_target(const Vector2 &_target) {
+        DrawableTransformScene* set_target(const Data &_target) {
             target = _target;
             return this;
         }
@@ -66,7 +66,7 @@ namespace Drawable {
 
     template<typename S>
     Scene<S>* move_to(Drawable* object, const Vector2 &destination) {
-        struct MoveTo: public DrawableTransformScene<S> { using DrawableTransformScene<S>::DrawableTransformScene;
+        struct MoveTo: public DrawableTransformScene<S, Vector2> { using DrawableTransformScene<S, Vector2>::DrawableTransformScene;
             void start() {
                 this->initial = this->object->position;
             }
@@ -86,7 +86,7 @@ namespace Drawable {
 
     template<typename S>
     Scene<S>* translate(Drawable* object, const Vector2 &offset) {
-        struct Translate: public DrawableTransformScene<S> { using DrawableTransformScene<S>::DrawableTransformScene;
+        struct Translate: public DrawableTransformScene<S, Vector2> { using DrawableTransformScene<S, Vector2>::DrawableTransformScene;
             Vector2 previous_offset;
 
             void start() {
@@ -110,7 +110,7 @@ namespace Drawable {
 
     template<typename S>
     Scene<S>* scale(Drawable* object, const Vector2 &factor) {
-        struct Scale: public DrawableTransformScene<S> { using DrawableTransformScene<S>::DrawableTransformScene;
+        struct Scale: public DrawableTransformScene<S, Vector2> { using DrawableTransformScene<S, Vector2>::DrawableTransformScene;
             void start() {
                 this->initial = this->object->dimensions;
                 this->target = Vector2 {
@@ -238,6 +238,25 @@ namespace Drawable {
             return get_rectangle_occluding_circle_offset(Rectangle {
                 position.x, position.y, dimensions.x, dimensions.y
             }, circle_offset, t);
+        }
+
+        template<typename S>
+        static Scene<S>* animate_alive(GridCell* object, const float &new_alive) {
+            struct AnimateAlive: public DrawableTransformScene<S, float> { using DrawableTransformScene<S, float>::DrawableTransformScene;
+                void start() {
+                    this->initial = ((GridCell *)this->object)->alive;
+                }
+
+                void update_state(const float &t) {
+                    ((GridCell *)this->object)->alive = Easing::cubic(this->initial, this->target, t);
+                }
+            };
+
+            AnimateAlive* res = new AnimateAlive(1.0f);
+            res->set_object(object);
+            res->set_target(new_alive);
+
+            return res;
         }
     };
 
