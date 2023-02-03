@@ -97,15 +97,15 @@ public:
         add_scenes_with_last(Drawable::scale_together<ConwaysState, Drawable::GridCell>(state.cells, Vector2{0.5f, 0.5f}));
         add_scenes_with_last(Drawable::translate_together<ConwaysState, Drawable::GridCell>(state.cells, Vector2{0, (float)-app_data.height / 6}));
         
-        add_scene_with_last(write_text("Cells have neighbors"));
+        add_scene_after_last(write_text("Cells have neighbors"));
 
         // add_scene_after_last(new Scenes::SomeAliveSomeDead(2.0f))->wait(1.0f);
-        add_scene_after_last(Drawable::GridCell::animate_alive<ConwaysState>(state.cells[1], 1))->wait(1.0f);
+        add_scene_after_last(write_text("some alive, some dead."))->wait(1.0f);
+        add_scene_with_last(Drawable::GridCell::animate_alive<ConwaysState>(state.cells[1], 1));
         add_scene_with_last(Drawable::GridCell::animate_alive<ConwaysState>(state.cells[2], 1));
         add_scene_with_last(Drawable::GridCell::animate_alive<ConwaysState>(state.cells[5], 1));
-        add_scene_with_last(write_text("some alive, some dead."));
 
-        add_scene_after_last(write_text("If the number of alive\nneighbors is exactly 3..."))->wait(1.0f);
+        add_scene_after_last(write_text("If the number of alive\nneighbors is exactly 3..."))->wait(3.0f);
         add_scene_after_last(write_text("the cell will come alive."))->wait(3.0f);
         add_scene_after_last(Drawable::GridCell::animate_alive<ConwaysState>(state.cells[0], 1))->wait(1.0f);
     }
