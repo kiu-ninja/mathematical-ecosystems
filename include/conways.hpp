@@ -19,6 +19,10 @@ struct ConwaysState {
                 cells.add(new Drawable::GridCell(Rectangle { w / 2 + i * h / 3, h / 2 + j * h / 3, h / 3 - 20, h / 3 - 20 }));
             }
         }
+        for (int i = 0; i < 9; i++) {
+            if (i != 4)
+                cells[i]->stroke_col = Color { 200, 200, 200, 255 };
+        }
 
         hint_text.position = Vector2 { (float)app_data.width / 2, (float)app_data.height / 8 };
         hint_text.col = RED;
@@ -26,20 +30,36 @@ struct ConwaysState {
     }
 };
 
-struct ToggleThreeNeighbors: public Scene<ConwaysState> { using Scene::Scene;
+struct SetNeighborsAlive: public Scene<ConwaysState> { using Scene::Scene;
+    float target = -1;
+    int target_amount_of_alive_cells = -1;
+
+    SetNeighborsAlive* set_target(float _target) {
+        target = _target;
+        return this;
+    }
+
+    SetNeighborsAlive* set_target_amount_of_alive_cells(float _target_amount_of_alive_cells) {
+        target_amount_of_alive_cells = _target_amount_of_alive_cells;
+        return this;
+    }
+
     void update_state(ApplicationWithState<ConwaysState> &a, const float &t) {
         int count = 0;
         for (int i = 0; i < 9; i++) {
-            if (IsMouseButtonPressed(0)) {
+            if (i != 4 && IsMouseButtonPressed(0)) {
                 if (CheckCollisionPointRec(GetMousePosition(), a.state.cells[i]->get_stroke_rect())) {
-                    a.state.cells[i]->alive = 1 - a.state.cells[i]->alive;
+                    if (target >= 0)
+                        a.state.cells[i]->alive = target;
+                    else
+                        a.state.cells[i]->alive = 1 - a.state.cells[i]->alive;
                 }
             }
 
             if (a.state.cells[i]->alive > 0.5) count++;
         }
 
-        if (count < 3) a.current_frame--;
+        if (count != target_amount_of_alive_cells) a.current_frame--;
     }
 };
 
@@ -82,15 +102,21 @@ public:
         for (int i = 0; i < 9; i++) if (i != 4)
             add_scene_with_last(state.cells[i]->animate_alive(0));
 
-        add_scene_after_last(state.hint_text.write("Click on neighbor cells to\ntoggle their state."));
-        add_scene_after_last(new ToggleThreeNeighbors());
+        add_scene_after_last(state.hint_text.write("Click on neighbor cells to\nmake them alive"));
+        add_scene_after_last((new SetNeighborsAlive())->set_target(1)->set_target_amount_of_alive_cells(3));
         add_scene_after_last(state.hint_text.disappear());
 
         add_scene_after_last(state.subtitle_text.write("If the number of alive\nneighbors is exactly 3..."))->wait(2);
         add_scene_after_last(state.subtitle_text.write("the cell will come alive."))->wait(2);
         add_scene_after_last(state.cells[4]->animate_alive(1))->wait(0);
 
-         
+        add_scene_after_last(state.hint_text.write(""))->set_duration_frames(2);
+        add_scene_with_last(state.hint_text.appear());
+        add_scene_after_last(state.hint_text.write("Click on neighbor cells to\ntoggle their state"));
+        add_scene_after_last((new SetNeighborsAlive()));
+        add_scene_after_last(state.hint_text.disappear());
+
+        // add_scene_after_last(state.subtitle_text.write(""));
     }
 
     void background_update() { };
