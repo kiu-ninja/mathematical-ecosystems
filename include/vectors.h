@@ -80,6 +80,11 @@ inline Vector3 operator*=(Vector3 &a, const float &b) {
   return a;
 }
 
+// Elementwise multiplication
+inline Vector2 operator*(const Vector2 &a, const Vector2 &b) {
+  return {a.x * b.x, a.y * b.y};
+}
+
 
 // Dot product
 inline float dot(const Vector2 &a, const Vector2 &b) {

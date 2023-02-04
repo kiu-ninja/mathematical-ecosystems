@@ -7,6 +7,7 @@
 #include "stage.hpp"
 #include "circle.hpp"
 #include "drawing_functions.hpp"
+#include "single_field_interpolation.hpp"
 
 namespace Drawable {
     Rectangle padded_rectangle(const Rectangle &rect, const float &padding) {
@@ -65,64 +66,30 @@ namespace Drawable {
         };
 
         StatelessScene* move_to(const Vector2 &destination) {
-            struct MoveTo: public DrawableTransformScene<Vector2> { using DrawableTransformScene<Vector2>::DrawableTransformScene;
-                void start() {
-                    this->initial = this->object->position;
-                }
-
-                void update_state(const float &t) {
-                    this->object->position.x = Easing::cubic(this->initial.x, this->target.x, t);
-                    this->object->position.y = Easing::cubic(this->initial.y, this->target.y, t);
-                }
-            };
-
-            MoveTo* res = new MoveTo(1.0f);
-            res->set_object(this);
-            res->set_target(destination);
-
-            return res;
+            return Interpolate::interpolate<Vector2>(
+                &this->position, 
+                destination,
+                Interpolate::Mode::CUBIC, 
+                Interpolate::Behavior::STATIC
+            );
         }
 
         StatelessScene* translate(const Vector2 &offset) {
-            struct Translate: public DrawableTransformScene<Vector2> { using DrawableTransformScene<Vector2>::DrawableTransformScene;
-                Vector2 previous_offset;
-
-                void start() {
-                    this->initial = this->object->position;
-                    previous_offset = Vector2 { 0, 0 };
-                }
-
-                void update_state(const float &t) {
-                    this->object->position -= previous_offset;
-                    previous_offset = Easing::cubic(0, 1, t) * this->target - previous_offset;
-                    this->object->position += previous_offset;
-                }
-            };
-
-            Translate* res = new Translate(1.0f);
-            res->set_object(this);
-            res->set_target(offset);
-
-            return res;
+            return Interpolate::interpolate<Vector2>(
+                &this->position, 
+                offset, 
+                Interpolate::Mode::CUBIC, 
+                Interpolate::Behavior::RELATIVE_DELTA
+            );
         }
 
         StatelessScene* scale(const Vector2 &factor) {
-            struct Scale: public DrawableTransformScene<Vector2> { using DrawableTransformScene<Vector2>::DrawableTransformScene;
-                void start() {
-                    this->initial = this->object->dimensions;
-                    this->target = Vector2 {
-                        this->object->dimensions.x * this->target.x,
-                        this->object->dimensions.y * this->target.y
-                    };
-                }
-
-                void update_state(const float &t) {
-                    this->object->dimensions.x = Easing::cubic(this->initial.x, this->target.x, t);
-                    this->object->dimensions.y = Easing::cubic(this->initial.y, this->target.y, t);
-                }
-            };
-
-            return (new Scale(1.0f))->set_object(this)->set_target(factor);
+            return Interpolate::interpolate<Vector2>(
+                &this->dimensions, 
+                factor, 
+                Interpolate::Mode::CUBIC, 
+                Interpolate::Behavior::RELATIVE_FACTOR
+            );
         }
     };
 
@@ -135,46 +102,41 @@ namespace Drawable {
         std::vector<T*> objects;
 
         Group() {}
-        Group(std::vector<T*> _items) {
-
-        }
 
         void add(T* object) {
             objects.push_back(object);
         }
 
-        T* operator[](const unsigned int &i) {
+        T* operator[](const int &i) {
             return objects[i];
         }
 
-        std::vector<StatelessScene*> translate(const Vector2 &offset) {
-            std::vector<StatelessScene*> scenes;
+        SceneGroup* translate(const Vector2 &offset) {
+            SceneGroup* scenes = new SceneGroup();
 
             for (T* object : objects) {
-                scenes.push_back(object->translate(offset));
+                scenes->add(object->translate(offset));
             }
 
             return scenes;
         }
 
-        std::vector<StatelessScene*> scale(const Vector2 &factor) {
+        SceneGroup* scale(const Vector2 &factor) {
             Vector2 center = Vector2 { 0, 0 };
             for (T* object : objects) {
                 center += object->position;
             }
             center = center / objects.size();
 
-            std::vector<StatelessScene*> scenes;
+            SceneGroup* scenes = new SceneGroup();
 
             for (T* object : objects) {
-                scenes.push_back(object->scale(factor));
-                scenes.push_back(object->translate(Vector2 {
-                    (center.x - object->position.x) * 2 * factor.x,
-                    (center.y - object->position.y) * 2 * factor.y
+                scenes->add(object->scale(factor));
+                scenes->add(object->translate(Vector2 {
+                    (center.x - object->position.x) * factor.x,
+                    (center.y - object->position.y) * factor.y
                 }));
             }
-
-            std::cout << scenes.size() << "\n";
 
             return scenes;
         }
@@ -256,39 +218,21 @@ namespace Drawable {
         }
 
         StatelessScene* animate_alive(const float &new_alive) {
-            struct AnimateAlive: public DrawableTransformScene<float> { using DrawableTransformScene<float>::DrawableTransformScene;
-                void start() {
-                    this->initial = ((GridCell *)this->object)->alive;
-                }
-
-                void update_state(const float &t) {
-                    ((GridCell *)this->object)->alive = Easing::cubic(this->initial, this->target, t);
-                }
-            };
-
-            AnimateAlive* res = new AnimateAlive(1.0f);
-            res->set_object(this);
-            res->set_target(new_alive);
-
-            return res;
+            return Interpolate::interpolate<float>(
+                &this->alive, 
+                new_alive, 
+                Interpolate::Mode::CUBIC, 
+                Interpolate::Behavior::STATIC
+            );
         }
 
         StatelessScene* animate_visibility(const float &new_visibility) {
-            struct AnimateVisibility: public DrawableTransformScene<float> { using DrawableTransformScene<float>::DrawableTransformScene;
-                void start() {
-                    this->initial = ((GridCell *)this->object)->visibility;
-                }
-
-                void update_state(const float &t) {
-                    ((GridCell *)this->object)->visibility = Easing::cubic(this->initial, this->target, t);
-                }
-            };
-
-            AnimateVisibility* res = new AnimateVisibility(1.0f);
-            res->set_object(this);
-            res->set_target(new_visibility);
-
-            return res;
+            return Interpolate::interpolate<float>(
+                &this->visibility, 
+                new_visibility, 
+                Interpolate::Mode::CUBIC, 
+                Interpolate::Behavior::STATIC
+            );
         }
 
         void draw() {
@@ -310,10 +254,12 @@ namespace Drawable {
 
     struct String: public Drawable {
         std::string text;
+        Font font;
+        Color col = WHITE;
+        float alpha = 1;
 
         int width, height;
 
-        Font font;
         int font_size;
         float t = 0;
 
@@ -368,6 +314,14 @@ namespace Drawable {
             return res;
         }
 
+        StatelessScene* appear() {
+            return Interpolate::interpolate<float>(&this->alpha, 1, Interpolate::Mode::CUBIC_CUBIC, Interpolate::Behavior::STATIC);
+        }
+
+        StatelessScene* disappear() {
+            return Interpolate::interpolate<float>(&this->alpha, 0, Interpolate::Mode::CUBIC_CUBIC, Interpolate::Behavior::STATIC);
+        }
+
         void draw() {
             DrawTextEx(
                 this->font, 
@@ -375,7 +329,7 @@ namespace Drawable {
                 this->get_pos(), 
                 this->font_size, 
                 0, 
-                WHITE
+                Color{ col.r, col.g, col.b, (unsigned char)(clamp(alpha * 255, 0.0f, 255.0f)) }
             );
         }
     };

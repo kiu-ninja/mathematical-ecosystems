@@ -10,6 +10,7 @@ struct ApplicationData {
 class Application {
 public:
     ApplicationData app_data;
+    int current_frame;
     
 protected:
     Application(int window_width, int window_height, const char* name) {
@@ -25,6 +26,7 @@ protected:
 
 public:
     void start() {
+        current_frame = 0;
         setup();
 
         while (!WindowShouldClose()) {
@@ -33,6 +35,8 @@ public:
             BeginDrawing();
                 draw();
             EndDrawing();
+
+            current_frame++;
         }
     }
 

@@ -8,7 +8,8 @@
 struct ConwaysState {
     Drawable::Group<Drawable::GridCell> cells;
 
-    Drawable::String text;
+    Drawable::String subtitle_text;
+    Drawable::String hint_text;
     
     ConwaysState() {}
     ConwaysState(const ApplicationData &app_data) {
@@ -19,20 +20,28 @@ struct ConwaysState {
             }
         }
 
-        text.position = Vector2 { (float)app_data.width / 2, (float)3 * app_data.height / 4 };
+        hint_text.position = Vector2 { (float)app_data.width / 2, (float)app_data.height / 8 };
+        hint_text.col = RED;
+        subtitle_text.position = Vector2 { (float)app_data.width / 2, (float)3 * app_data.height / 4 };
     }
 };
 
-// struct InteractiveGrid: public Scene<ConwaysState> { using Scene::Scene;
-//     void update_state(ConwaysState &s, const float &t) {
-//         for (int i = 0; i < 9; i++) {
-//             if (IsMouseButtonPressed(0))
-//             if (CheckCollisionPointRec(GetMousePosition(), s.cells[i]->get_stroke_rect())) {
-//                 s.cells[i]->alive = 1 - s.cells[i]->alive;
-//             }
-//         }
-//     }
-// };
+struct ToggleThreeNeighbors: public Scene<ConwaysState> { using Scene::Scene;
+    void update_state(ApplicationWithState<ConwaysState> &a, const float &t) {
+        int count = 0;
+        for (int i = 0; i < 9; i++) {
+            if (IsMouseButtonPressed(0)) {
+                if (CheckCollisionPointRec(GetMousePosition(), a.state.cells[i]->get_stroke_rect())) {
+                    a.state.cells[i]->alive = 1 - a.state.cells[i]->alive;
+                }
+            }
+
+            if (a.state.cells[i]->alive > 0.5) count++;
+        }
+
+        if (count < 3) a.current_frame--;
+    }
+};
 
 class Conways: public Stage<ConwaysState> {
 public:
@@ -42,43 +51,46 @@ public:
     int font_size = 20;
     void state_setup() {
         font = LoadFontEx("demo-font.otf", font_size * 20, NULL, 0);
-        state.text.font = font;
-        state.text.font_size = font_size;
+        state.subtitle_text.font = font;
+        state.subtitle_text.font_size = font_size;
+        state.hint_text.font = font;
+        state.hint_text.font_size = font_size;
     }
 
     void scene_setup() {
         add_scene(state.cells[4]->animate_visibility(1))->wait(1)->set_duration(2);
 
-        add_scene_after_last(state.text.write("This is a cell."));
+        add_scene_after_last(state.subtitle_text.write("This is a cell."));
 
-        add_scene_after_last(state.text.write("Cells can be alive"))->wait(2);
+        add_scene_after_last(state.subtitle_text.write("A cell can be alive"))->wait(2);
         add_scene_with_last(state.cells[4]->animate_alive(1));
 
-        add_scene_after_last(state.text.write("... or dead."))->wait(2);
+        add_scene_after_last(state.subtitle_text.write("... or dead."))->wait(2);
         add_scene_with_last(state.cells[4]->animate_alive(0));
 
-        add_scene_after_last(state.text.write("Cells have 8 neighbors"))->wait(2);
+        add_scene_after_last(state.subtitle_text.write("Cells have 8 neighbors"))->wait(2);
         for (int i = 0; i < 9; i++)
             add_scene_with_last(state.cells[i]->animate_visibility(1));
-        add_scenes_with_last(state.cells.scale(Vector2{0.5f, 0.5f}));
-        add_scenes_with_last(state.cells.translate(Vector2{0, (float)-app_data.height / 6}));
-        add_scene_with_last(state.text.move_to(Vector2 { (float)app_data.width / 2, (float)4 * app_data.height / 5 }))->set_duration(2);
+        add_scene_with_last(state.cells.scale(Vector2{ 0.5f, 0.5f }));
+        add_scene_with_last(state.subtitle_text.translate(Vector2 { 0, (float)app_data.height / 8 }))->set_duration(2);
         
-        add_scene_after_last(state.text.write("some alive"))->wait(2);
-        add_scene_with_last(state.cells[0]->animate_alive(1));
-        add_scene_with_last(state.cells[0]->animate_visibility(1));
-        add_scene_with_last(state.cells[1]->animate_alive(1));
-        add_scene_with_last(state.cells[1]->animate_visibility(1));
-        add_scene_with_last(state.cells[5]->animate_alive(1));
-        add_scene_with_last(state.cells[5]->animate_visibility(1));
+        add_scene_after_last(state.subtitle_text.write("they can be alive"))->wait(2);
+        for (int i = 0; i < 9; i++) if (i != 4)
+            add_scene_with_last(state.cells[i]->animate_alive(1));
 
-        add_scene_after_last(state.text.write("... some dead."))->wait(2);
+        add_scene_after_last(state.subtitle_text.write("... or dead."))->wait(2);
+        for (int i = 0; i < 9; i++) if (i != 4)
+            add_scene_with_last(state.cells[i]->animate_alive(0));
 
-        // add_scene_after_last(new InteractiveGrid(5));
+        add_scene_after_last(state.hint_text.write("Click on neighbor cells to\ntoggle their state."));
+        add_scene_after_last(new ToggleThreeNeighbors());
+        add_scene_after_last(state.hint_text.disappear());
 
-        add_scene_after_last(state.text.write("If the number of alive\nneighbors is exactly 3..."))->wait(2);
-        add_scene_after_last(state.text.write("the cell will come alive."))->wait(2);
-        add_scene_after_last(state.cells[4]->animate_alive(1))->wait(1);
+        add_scene_after_last(state.subtitle_text.write("If the number of alive\nneighbors is exactly 3..."))->wait(2);
+        add_scene_after_last(state.subtitle_text.write("the cell will come alive."))->wait(2);
+        add_scene_after_last(state.cells[4]->animate_alive(1))->wait(0);
+
+         
     }
 
     void background_update() { };
@@ -90,7 +102,8 @@ public:
             state.cells[i]->draw();
         }
 
-        state.text.draw();
+        state.subtitle_text.draw();
+        state.hint_text.draw();
     }
 }; 
 
