@@ -3,10 +3,10 @@
 #include <string>
 #include "stage.hpp"
 #include "easing.hpp"
-#include "drawing_functions.hpp"
+#include "drawables.hpp"
 
 struct ConwaysState {
-    std::vector<Drawable::GridCell*> cells;
+    Drawable::Group<Drawable::GridCell> cells;
 
     Drawable::String text;
     
@@ -15,11 +15,24 @@ struct ConwaysState {
         float w = app_data.width, h = app_data.height;
         for (int j = -1; j <= 1; j++) {
             for (int i = -1; i <= 1; i++) {
-                cells.push_back(new Drawable::GridCell(Rectangle { w / 2 + i * h / 3, h / 2 + j * h / 3, h / 3 - 20, h / 3 - 20 }));
+                cells.add(new Drawable::GridCell(Rectangle { w / 2 + i * h / 3, h / 2 + j * h / 3, h / 3 - 20, h / 3 - 20 }));
             }
         }
+
+        text.position = Vector2 { (float)app_data.width / 2, (float)3 * app_data.height / 4 };
     }
 };
+
+// struct InteractiveGrid: public Scene<ConwaysState> { using Scene::Scene;
+//     void update_state(ConwaysState &s, const float &t) {
+//         for (int i = 0; i < 9; i++) {
+//             if (IsMouseButtonPressed(0))
+//             if (CheckCollisionPointRec(GetMousePosition(), s.cells[i]->get_stroke_rect())) {
+//                 s.cells[i]->alive = 1 - s.cells[i]->alive;
+//             }
+//         }
+//     }
+// };
 
 class Conways: public Stage<ConwaysState> {
 public:
@@ -34,36 +47,38 @@ public:
     }
 
     void scene_setup() {
-        // add_scene(state.text.write<ConwaysState>("This is a cell."))->wait(1)->set_duration(2);
-        add_scene(Drawable::GridCell::animate_visibility<ConwaysState>(state.cells[4], 1))->wait(1)->set_duration(2);
+        add_scene(state.cells[4]->animate_visibility(1))->wait(1)->set_duration(2);
 
-        add_scene_after_last(state.text.write<ConwaysState>("This is a cell."));
+        add_scene_after_last(state.text.write("This is a cell."));
 
-        add_scene_after_last(state.text.write<ConwaysState>("Cells can be alive"))->wait(2);
-        add_scene_with_last(Drawable::GridCell::animate_alive<ConwaysState>(state.cells[4], 1));
+        add_scene_after_last(state.text.write("Cells can be alive"))->wait(2);
+        add_scene_with_last(state.cells[4]->animate_alive(1));
 
-        add_scene_after_last(state.text.write<ConwaysState>("... or dead."))->wait(2);
-        add_scene_with_last(Drawable::GridCell::animate_alive<ConwaysState>(state.cells[4], 0));
+        add_scene_after_last(state.text.write("... or dead."))->wait(2);
+        add_scene_with_last(state.cells[4]->animate_alive(0));
 
-        add_scene_after_last(state.text.write<ConwaysState>("Cells can have neighbors"))->wait(2);
-        add_scenes_with_last(Drawable::scale_together<ConwaysState, Drawable::GridCell>(state.cells, Vector2{0.5f, 0.5f}));
-        add_scenes_with_last(Drawable::translate_together<ConwaysState, Drawable::GridCell>(state.cells, Vector2{0, (float)-app_data.height / 6}));
-        
-        add_scene_after_last(state.text.write<ConwaysState>("some alive"))->wait(2);
-        add_scene_with_last(Drawable::GridCell::animate_alive<ConwaysState>(state.cells[0], 1));
-        add_scene_with_last(Drawable::GridCell::animate_visibility<ConwaysState>(state.cells[0], 1));
-        add_scene_with_last(Drawable::GridCell::animate_alive<ConwaysState>(state.cells[1], 1));
-        add_scene_with_last(Drawable::GridCell::animate_visibility<ConwaysState>(state.cells[1], 1));
-        add_scene_with_last(Drawable::GridCell::animate_alive<ConwaysState>(state.cells[5], 1));
-        add_scene_with_last(Drawable::GridCell::animate_visibility<ConwaysState>(state.cells[5], 1));
-
-        add_scene_after_last(state.text.write<ConwaysState>("... some dead."))->wait(2);
+        add_scene_after_last(state.text.write("Cells have 8 neighbors"))->wait(2);
         for (int i = 0; i < 9; i++)
-            add_scene_with_last(Drawable::GridCell::animate_visibility<ConwaysState>(state.cells[i], 1));
+            add_scene_with_last(state.cells[i]->animate_visibility(1));
+        add_scenes_with_last(state.cells.scale(Vector2{0.5f, 0.5f}));
+        add_scenes_with_last(state.cells.translate(Vector2{0, (float)-app_data.height / 6}));
+        add_scene_with_last(state.text.move_to(Vector2 { (float)app_data.width / 2, (float)4 * app_data.height / 5 }))->set_duration(2);
+        
+        add_scene_after_last(state.text.write("some alive"))->wait(2);
+        add_scene_with_last(state.cells[0]->animate_alive(1));
+        add_scene_with_last(state.cells[0]->animate_visibility(1));
+        add_scene_with_last(state.cells[1]->animate_alive(1));
+        add_scene_with_last(state.cells[1]->animate_visibility(1));
+        add_scene_with_last(state.cells[5]->animate_alive(1));
+        add_scene_with_last(state.cells[5]->animate_visibility(1));
 
-        add_scene_after_last(state.text.write<ConwaysState>("If the number of alive\nneighbors is exactly 3..."))->wait(2);
-        add_scene_after_last(state.text.write<ConwaysState>("the cell will come alive."))->wait(2);
-        add_scene_after_last(Drawable::GridCell::animate_alive<ConwaysState>(state.cells[4], 1))->wait(1);
+        add_scene_after_last(state.text.write("... some dead."))->wait(2);
+
+        // add_scene_after_last(new InteractiveGrid(5));
+
+        add_scene_after_last(state.text.write("If the number of alive\nneighbors is exactly 3..."))->wait(2);
+        add_scene_after_last(state.text.write("the cell will come alive."))->wait(2);
+        add_scene_after_last(state.cells[4]->animate_alive(1))->wait(1);
     }
 
     void background_update() { };
@@ -72,25 +87,10 @@ public:
         ClearBackground(BLACK);
 
         for (int i = 0; i < 9; i++) {
-            draw_rectangle_circle_bounded(
-                state.cells[i]->get_stroke_rect(), 
-                state.cells[i]->get_occluder(), 
-                state.cells[i]->get_stroke_col()
-            );
-            DrawRectangleRec(
-                state.cells[i]->get_fill_rect(), 
-                state.cells[i]->get_fill_col()
-            );
+            state.cells[i]->draw();
         }
 
-        DrawTextEx(
-            font, 
-            state.text.get_string().c_str(), 
-            state.text.get_pos_centered_at({ (float)app_data.width / 2, (float)4 * app_data.height / 5 }), 
-            font_size, 
-            0, 
-            WHITE
-        );
+        state.text.draw();
     }
 }; 
 

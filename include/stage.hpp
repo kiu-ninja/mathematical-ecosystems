@@ -26,15 +26,13 @@ struct ExampleScene: public Scene<ExampleState> { using Scene::Scene;
 }
 ```
 */
-template <typename S> struct Scene {
-    S initial_state;
-    
+struct StatelessScene {
     int start_frame = 0;
     int duration_frames = 1;
 
     ApplicationData app_data;
 
-    Scene(const float &duration_seconds) {
+    StatelessScene(const float &duration_seconds) {
         // Initialize a scene that will last `duration_seconds`
         if (duration_seconds > 0) {
             duration_frames = duration_seconds * 60;
@@ -43,7 +41,7 @@ template <typename S> struct Scene {
         }
     }
 
-    Scene(const float &start_seconds, const float &duration_seconds) {
+    StatelessScene(const float &start_seconds, const float &duration_seconds) {
         // Initialize a scene that will start at `start_seconds` and will last `duration_seconds`
         start_frame = start_seconds * 60;
         if (duration_seconds > 0) {
@@ -53,6 +51,46 @@ template <typename S> struct Scene {
         }
     }
     
+    void _start(const ApplicationData &_app_data) {
+        app_data = _app_data;
+
+        start();
+    };
+
+    StatelessScene* after(StatelessScene* other) {
+        start_frame = other->start_frame + other->duration_frames;
+        return this;
+    }
+
+    StatelessScene* with(StatelessScene* other) {
+        start_frame = other->start_frame;
+        return this;
+    }
+
+    StatelessScene* wait(const float &delay_seconds) {
+        start_frame += delay_seconds * 60;
+        return this;
+    }
+
+    StatelessScene* set_duration(const float &duration_seconds) {
+        duration_frames = duration_seconds * 60;
+        return this;
+    }
+
+    virtual void update_state(const float &t) {
+        // std::cout << "update_state() NOT IMPLEMENTED\n";
+    };
+
+    virtual void start() {
+        // std::cout << "start() NOT IMPLEMENTED\n";
+    }
+};
+
+template <typename S> struct Scene: public StatelessScene {
+    S initial_state;
+
+    using StatelessScene::StatelessScene;
+    
     void _start(const ApplicationData &_app_data, S &state) {
         initial_state = state;
         app_data = _app_data;
@@ -60,26 +98,6 @@ template <typename S> struct Scene {
         start();
         start(state);
     };
-
-    Scene<S>* after(Scene<S>* other) {
-        start_frame = other->start_frame + other->duration_frames;
-        return this;
-    }
-
-    Scene<S>* with(Scene<S>* other) {
-        start_frame = other->start_frame;
-        return this;
-    }
-
-    Scene<S>* wait(const float &delay_seconds) {
-        start_frame += delay_seconds * 60;
-        return this;
-    }
-
-    Scene<S>* set_duration(const float &duration_seconds) {
-        duration_frames = duration_seconds * 60;
-        return this;
-    }
 
     virtual void update_state(S &state, const float &t) {
         // std::cout << "update_state() NOT IMPLEMENTED\n";
@@ -105,6 +123,8 @@ public:
     S state;
     int current_frame;
     std::vector<Scene<S>*> scenes;
+    std::vector<StatelessScene*> stateless_scenes;
+    StatelessScene* _last_scene;
 
 public:
     Stage(int window_width, int window_height, const char* name) : 
@@ -125,6 +145,16 @@ public:
 
             if (s->start_frame <= current_frame && current_frame - s->start_frame < s->duration_frames) {
                 s->update_state(state, (float)(current_frame - s->start_frame) / (s->duration_frames - 1));
+                s->update_state((float)(current_frame - s->start_frame) / (s->duration_frames - 1));
+            }
+        }
+
+        for (StatelessScene* s : stateless_scenes) {
+            if (s->start_frame == current_frame) {
+                s->_start(app_data);
+            }
+
+            if (s->start_frame <= current_frame && current_frame - s->start_frame < s->duration_frames) {
                 s->update_state((float)(current_frame - s->start_frame) / (s->duration_frames - 1));
             }
         }
@@ -160,11 +190,43 @@ public:
 
     Scene<S>* add_scene(Scene<S>* scene) {
         scenes.push_back(scene);
+        _last_scene = scene;
         return scene;
     }
 
-    Scene<S>* last_scene() {
-        return scenes[scenes.size() - 1];
+    std::vector<StatelessScene*> add_scenes_after_last(const std::vector<StatelessScene*> &_scenes) {
+        StatelessScene* last = last_scene();
+        for (StatelessScene* scene : _scenes) {
+            add_scene(scene->after(last))->set_duration(last->duration_frames / 60);
+        }
+        return _scenes;
+    }
+
+    std::vector<StatelessScene*> add_scenes_with_last(const std::vector<StatelessScene*> &_scenes) {
+        for (StatelessScene* scene : _scenes) {
+            add_scene_with_last(scene)->set_duration(last_scene()->duration_frames / 60);
+        }
+        return _scenes;
+    }
+
+    StatelessScene* add_scene_after_last(StatelessScene* scene) {
+        add_scene(scene->after(last_scene()));
+        return scene;
+    }
+
+    StatelessScene* add_scene_with_last(StatelessScene* scene) {
+        add_scene(scene->with(last_scene()));
+        return scene;
+    }
+
+    StatelessScene* add_scene(StatelessScene* scene) {
+        stateless_scenes.push_back(scene);
+        _last_scene = scene;
+        return scene;
+    }
+
+    StatelessScene* last_scene() {
+        return _last_scene;
     }
 
     virtual void state_setup() { 

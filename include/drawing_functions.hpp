@@ -1,7 +1,10 @@
+// #pragma once
+
 #include <cmath>
 #include "raylib.h"
+#include "circle.hpp"
+#include "easing.hpp"
 #include "vectors.h"
-#include "drawables.hpp"
 
 void draw_grid(const Vector2 &center, const Rectangle &bounds, const float &cell_size, const Color &col) {
     const float half_cell_size = cell_size / 2;
@@ -114,16 +117,10 @@ void draw_line_circle_bounded(const Vector2 &a, const Vector2 &b, const Circle &
 }
 
 void draw_rectangle_circle_bounded(const Rectangle &r, const Circle &c, const Color &col) {
-    float x1 = r.x;
-    float y1 = r.y;
-    float x2 = r.x + r.width;
-    float y2 = r.y + r.height;
-    // float x1 = r.x - r.width / 2;
-    // float x2 = r.x + r.width / 2;
-    // float y1 = r.y - r.height / 2;
-    // float y2 = r.y + r.height / 2;
-    // Circle c = _c;
-    // c.o -= Vector2 {r.width / 2, r.height / 2};
+    const float x1 = r.x;
+    const float y1 = r.y;
+    const float x2 = r.x + r.width;
+    const float y2 = r.y + r.height;
     draw_line_circle_bounded({x1, y1}, {x2, y1}, c, col);  //  TOP
     draw_line_circle_bounded({x1, y2}, {x2, y2}, c, col);  //  BOTTOM
     draw_line_circle_bounded({x1, y1}, {x1, y2}, c, col);  //  LEFT
