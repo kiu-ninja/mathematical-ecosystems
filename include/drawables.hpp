@@ -132,10 +132,7 @@ namespace Drawable {
 
             for (T* object : objects) {
                 scenes->add(object->scale(factor));
-                scenes->add(object->translate(Vector2 {
-                    (center.x - object->position.x) * factor.x,
-                    (center.y - object->position.y) * factor.y
-                }));
+                scenes->add(object->translate((object->position - center) * (factor - Vector2 { 1, 1 })));
             }
 
             return scenes;
@@ -196,7 +193,7 @@ namespace Drawable {
         }
 
         Rectangle get_fill_rect() {
-            return get_rect_padded(6);
+            return get_rect_padded(dimensions.x / 10);
         }
 
         Color get_stroke_col() {
