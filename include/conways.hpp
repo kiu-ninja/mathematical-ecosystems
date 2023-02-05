@@ -5,28 +5,41 @@
 #include "easing.hpp"
 #include "drawables.hpp"
 
-struct ConwaysState {
-    Drawable::Group<Drawable::GridCell> cells;
+#define LG_SIZE 61
+#define LG_HALF (LG_SIZE / 2)
 
+struct ConwaysState {
+    Drawable::GridCell* _life_grid[LG_SIZE][LG_SIZE];
+    Drawable::Group<Drawable::GridCell> cells;
     Drawable::String subtitle_text;
-    Drawable::String hint_text;
-    
+    int simulation_speed = 10;
+
+    Drawable::GridCell* life_grid(int x, int y) {
+        return _life_grid[(y + LG_HALF) % LG_SIZE][(x + LG_HALF) % LG_SIZE];
+    }
+
     ConwaysState() {}
-    ConwaysState(const ApplicationData &app_data) {
-        float w = app_data.width, h = app_data.height;
-        for (int j = -1; j <= 1; j++) {
-            for (int i = -1; i <= 1; i++) {
-                cells.add(new Drawable::GridCell(Rectangle { w / 2 + i * h / 3, h / 2 + j * h / 3, h / 3 - 20, h / 3 - 20 }));
+    ConwaysState(ApplicationData app_data) {
+        for (int i = 0; i < LG_SIZE; i++) {
+            for (int j = 0; j < LG_SIZE; j++) {
+                Drawable::GridCell* cell = new Drawable::GridCell(
+                    Rectangle {
+                        (float)(j - LG_HALF) * app_data.width / LG_SIZE + app_data.width / 2,
+                        (float)(i - LG_HALF) * app_data.width / LG_SIZE + app_data.height / 2,
+                        (float)app_data.width / LG_SIZE,
+                        (float)app_data.width / LG_SIZE
+                    }
+                );
+                cells.add(cell);
+                _life_grid[i][j] = cell;
+                // cell->alive = rand() % 2 == 0 ? 1.0f : 0.0f;
             }
         }
-        for (int i = 0; i < 9; i++) {
-            if (i != 4)
-                cells[i]->stroke_col = Color { 200, 200, 200, 255 };
-        }
-
-        hint_text.position = Vector2 { (float)app_data.width / 2, (float)app_data.height / 8 };
-        hint_text.col = RED;
-        subtitle_text.position = Vector2 { (float)app_data.width / 2, (float)3 * app_data.height / 4 };
+        life_grid(0, 1)->alive = 1;
+        life_grid(1, 0)->alive = 1;
+        life_grid(0, -1)->alive = 1;
+        life_grid(1, 1)->alive = 1;
+        life_grid(-1, 1)->alive = 1;
     }
 };
 
@@ -45,21 +58,51 @@ struct SetNeighborsAlive: public Scene<ConwaysState> { using Scene::Scene;
     }
 
     void update_state(ApplicationWithState<ConwaysState> &a, const float &t) {
-        int count = 0;
-        for (int i = 0; i < 9; i++) {
-            if (i != 4 && IsMouseButtonPressed(0)) {
-                if (CheckCollisionPointRec(GetMousePosition(), a.state.cells[i]->get_stroke_rect())) {
-                    if (target >= 0)
-                        a.state.cells[i]->alive = target;
-                    else
-                        a.state.cells[i]->alive = 1 - a.state.cells[i]->alive;
+
+    }
+};
+
+struct ConwaysSimulation: public Scene<ConwaysState> { using Scene::Scene;
+    int frame_count = 0;
+
+    void update_state(ApplicationWithState<ConwaysState> &a, const float &t) {
+        if (frame_count > a.state.simulation_speed) {
+            int neighbor_counts[LG_SIZE + 2][LG_SIZE + 2];
+            for (int i = 0; i < LG_SIZE + 2; i++) {
+                for (int j = 0; j < LG_SIZE + 2; j++) {
+                    neighbor_counts[i][j] = 0;
                 }
             }
 
-            if (a.state.cells[i]->alive > 0.5) count++;
+            for (int i = 0; i < LG_SIZE; i++) {
+                for (int j = 0; j < LG_SIZE; j++) {
+                    if (a.state._life_grid[i][j]->alive > 0.5f) {
+                        for (int p = 0; p < 3; p++) {
+                            for (int q = 0; q < 3; q++) {
+                                neighbor_counts[i + p][j + q]++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            for (int i = 0; i < LG_SIZE; i++) {
+                for (int j = 0; j < LG_SIZE; j++) {
+                    if (a.state._life_grid[i][j]->alive > 0.5f) {
+                        if (neighbor_counts[i + 1][j + 1] - 1 != 2 && neighbor_counts[i + 1][j + 1] - 1 != 3) {
+                            a.state._life_grid[i][j]->alive = 0.0f;
+                        }
+                    } else {
+                        if (neighbor_counts[i + 1][j + 1] == 3) {
+                            a.state._life_grid[i][j]->alive = 1.0f;
+                        }
+                    }
+                }
+            }
+            frame_count = 0;
         }
 
-        if (count != target_amount_of_alive_cells) a.current_frame--;
+        frame_count++;
     }
 };
 
@@ -73,50 +116,19 @@ public:
         font = LoadFontEx("demo-font.otf", font_size * 20, NULL, 0);
         state.subtitle_text.font = font;
         state.subtitle_text.font_size = font_size;
-        state.hint_text.font = font;
-        state.hint_text.font_size = font_size;
+        // state.hint_text.font = font;
+        // state.hint_text.font_size = font_size;
     }
 
     void scene_setup() {
-        add_scene(state.cells[4]->animate_visibility(1))->wait(1)->set_duration(2);
+        // add_scene((new ConwaysSimulation()))->set_duration(1000);
 
-        add_scene_after_last(state.subtitle_text.write("This is a cell."));
+        add_scene(state.cells[0]->animate_visibility(1))->set_duration(1);
+        for (int i = 0; i < LG_SIZE*LG_SIZE; i++)
+            add_scene_with_last(state.cells[i]->animate_visibility(1));//->wait(0.017f * (i % 10 == 0));
 
-        add_scene_after_last(state.subtitle_text.write("A cell can be alive"))->wait(2);
-        add_scene_with_last(state.cells[4]->animate_alive(1));
-
-        add_scene_after_last(state.subtitle_text.write("... or dead."))->wait(2);
-        add_scene_with_last(state.cells[4]->animate_alive(0));
-
-        add_scene_after_last(state.subtitle_text.write("Cells have 8 neighbors"))->wait(2);
-        for (int i = 0; i < 9; i++)
-            add_scene_with_last(state.cells[i]->animate_visibility(1));
-        add_scene_with_last(state.cells.scale(Vector2{ 0.5f, 0.5f }));
-        add_scene_with_last(state.subtitle_text.translate(Vector2 { 0, (float)app_data.height / 8 }))->set_duration(2);
-        
-        add_scene_after_last(state.subtitle_text.write("they can be alive"))->wait(2);
-        for (int i = 0; i < 9; i++) if (i != 4)
-            add_scene_with_last(state.cells[i]->animate_alive(1));
-
-        add_scene_after_last(state.subtitle_text.write("... or dead."))->wait(2);
-        for (int i = 0; i < 9; i++) if (i != 4)
-            add_scene_with_last(state.cells[i]->animate_alive(0));
-
-        add_scene_after_last(state.hint_text.write("Click on neighbor cells to\nmake them alive"));
-        add_scene_after_last((new SetNeighborsAlive())->set_target(1)->set_target_amount_of_alive_cells(3));
-        add_scene_after_last(state.hint_text.disappear());
-
-        add_scene_after_last(state.subtitle_text.write("If the number of alive\nneighbors is exactly 3..."))->wait(2);
-        add_scene_after_last(state.subtitle_text.write("the cell will come alive."))->wait(2);
-        add_scene_after_last(state.cells[4]->animate_alive(1))->wait(0);
-
-        add_scene_after_last(state.hint_text.write(""))->set_duration_frames(2);
-        add_scene_with_last(state.hint_text.appear());
-        add_scene_after_last(state.hint_text.write("Click on neighbor cells to\ntoggle their state"));
-        add_scene_after_last((new SetNeighborsAlive()));
-        add_scene_after_last(state.hint_text.disappear());
-
-        // add_scene_after_last(state.subtitle_text.write(""));
+        add_scene_after_last(state.cells.scale(Vector2 { 6.0f, 6.0f }))->set_duration(2);
+        add_scene_with_last(Interpolate::interpolate<int>(&state.simulation_speed, 60, Interpolate::Mode::LINEAR, Interpolate::Behavior::STATIC));
     }
 
     void background_update() { };
@@ -124,12 +136,12 @@ public:
     void draw() {
         ClearBackground(BLACK);
 
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i < LG_SIZE*LG_SIZE; i++) {
             state.cells[i]->draw();
         }
 
         state.subtitle_text.draw();
-        state.hint_text.draw();
+        // state.hint_text.draw();
     }
 }; 
 
@@ -153,46 +165,3 @@ public:
 //         DrawRectangle(x1, y1, x2 - x1, y2 - y1, {100, 200, 255, 255});
 //     }
 // }
-
-// struct ConwaysSimulation: public Scene<ConwaysState> { using Scene::Scene;
-//     int current_frame = 0;
-
-//     void update_state(ConwaysState &s, const float &t) {
-//         if (current_frame % 18 == 0) {
-//             int neighbor_counts[LIFE_GRID_SIZE + 2][LIFE_GRID_SIZE + 2];
-//             for (int i = 0; i < LIFE_GRID_SIZE + 2; i++) {
-//                 for (int j = 0; j < LIFE_GRID_SIZE + 2; j++) {
-//                     neighbor_counts[i][j] = 0;
-//                 }
-//             }
-
-//             for (int i = 0; i < LIFE_GRID_SIZE; i++) {
-//                 for (int j = 0; j < LIFE_GRID_SIZE; j++) {
-//                     if (s.life_grid[i][j]) {
-//                         for (int p = 0; p < 3; p++) {
-//                             for (int q = 0; q < 3; q++) {
-//                                 neighbor_counts[i + p][j + q]++;
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
-
-//             for (int i = 0; i < LIFE_GRID_SIZE; i++) {
-//                 for (int j = 0; j < LIFE_GRID_SIZE; j++) {
-//                     if (s.life_grid[i][j]) {
-//                         if (neighbor_counts[i + 1][j + 1] - 1 != 2 && neighbor_counts[i + 1][j + 1] - 1 != 3) {
-//                             s.life_grid[i][j] = false;
-//                         }
-//                     } else {
-//                         if (neighbor_counts[i + 1][j + 1] == 3) {
-//                             s.life_grid[i][j] = true;
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-
-//         current_frame++;
-//     }
-// };
