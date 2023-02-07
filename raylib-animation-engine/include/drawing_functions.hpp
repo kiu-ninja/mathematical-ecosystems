@@ -4,7 +4,7 @@
 #include "raylib.h"
 #include "circle.hpp"
 #include "easing.hpp"
-#include "vectors.h"
+#include "vectors.hpp"
 
 void draw_grid(const Vector2 &center, const Rectangle &bounds, const float &cell_size, const Color &col) {
     const float half_cell_size = cell_size / 2;

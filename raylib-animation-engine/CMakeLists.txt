@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(mathfest)
+project(raylib-animation-engine)
 
 # Dependencies
 find_package(raylib 4.2.0 QUIET) # QUIET or REQUIRED
@@ -22,17 +22,17 @@ set(CMAKE_CXX_STANDARD 11) # Requires C11 standard
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
 
 file( GLOB_RECURSE LIB_SOURCES src/*.cpp )
-add_executable(mathfest ${LIB_SOURCES})
+add_executable(raylib-animation-engine ${LIB_SOURCES})
 
-include_directories(mathfest include)
+include_directories(raylib-animation-engine include)
 
-target_link_libraries(mathfest raylib)
+target_link_libraries(raylib-animation-engine raylib)
 
 # Checks if OSX and links appropriate frameworks (only required on MacOS)
 if (APPLE)
-    target_link_libraries(mathfest "-framework IOKit")
-    target_link_libraries(mathfest "-framework Cocoa")
-    target_link_libraries(mathfest "-framework OpenGL")
+    target_link_libraries(raylib-animation-engine "-framework IOKit")
+    target_link_libraries(raylib-animation-engine "-framework Cocoa")
+    target_link_libraries(raylib-animation-engine "-framework OpenGL")
 elseif (LINUX)
-    target_link_libraries(mathfest glfw)
+    target_link_libraries(raylib-animation-engine glfw)
 endif()
