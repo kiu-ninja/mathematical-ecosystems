@@ -40,12 +40,16 @@ struct StatelessScene {
             duration_frames = 1 << 30;
         }
     }
+
+    virtual StatelessScene* get_scene() {
+        _start();
+        return this;
+    }
     
     virtual void _start() {
         app_data = app->app_data;
 
         start();
-        _update_state();
     };
 
     StatelessScene* after(StatelessScene* other) {
@@ -88,7 +92,7 @@ struct StatelessScene {
     }
     
     virtual void _update_state() {
-        if (this->start_frame < app->current_frame && app->current_frame - this->start_frame < this->duration_frames) {
+        if (this->start_frame <= app->current_frame && app->current_frame - this->start_frame < this->duration_frames) {
             float t = (float)(app->current_frame - start_frame + 1) / (duration_frames);
         
             update_state(t);
@@ -97,6 +101,21 @@ struct StatelessScene {
 
     virtual void update_state(const float &t) { };
     virtual void start() { };
+};
+
+struct DebugScene: public StatelessScene {
+    std::string s;
+    DebugScene(std::string _s) {
+        s = _s;
+    }
+
+    void start() override {
+        std::cout << s << " | START" << "\n";
+    }
+
+    void update_state(const float &t) override {
+        std::cout << s << " | UPDATE" << "\n";
+    }
 };
 
 template <typename S> struct Scene: public StatelessScene {
@@ -157,6 +176,7 @@ struct SceneGroup: public StatelessScene {
 
     SceneGroup* insert(StatelessScene* scene) {
         scene->_set_application_pointer(this->app);
+
         if (merged.size() == scenes.size()) {
             scene->set_start_frames(start_frame);
             merged.push_back(false);
@@ -191,17 +211,40 @@ struct SceneGroup: public StatelessScene {
         return this;
     }
 
+    StatelessScene* get_scene() override {
+        for (StatelessScene* &scene : scenes) {
+            scene = scene->get_scene();
+        }
+
+        _start();
+        return this;
+    }
+
     void _start() override {
         this->start();
-        for (StatelessScene* scene : scenes) {
-            scene->_start();
-        }
     }
 
     void _update_state() override {
         for (StatelessScene* scene : scenes) {
             scene->_update_state();
         }
+    }
+};
+
+struct SceneBuilder: public StatelessScene {
+    std::function<void(SceneGroup*)> builder;
+    
+    SceneBuilder(std::function<void(SceneGroup*)> f) {
+        builder = f;
+    }
+
+    StatelessScene* get_scene() override {
+        SceneGroup* sg = new SceneGroup();
+        sg->set_duration_frames(this->duration_frames);
+        sg->set_start_frames(this->start_frame);
+        sg->_set_application_pointer(this->app);
+        builder(sg);
+        return sg->get_scene();
     }
 };
 
@@ -223,14 +266,11 @@ public:
     }
 
     void update() {
-        for (StatelessScene* s : scenes) {
-            if (s->start_frame == this->current_frame) {
-                s->_start();
-            }
+        for (StatelessScene* &s : scenes) {
+            if (s->start_frame == this->current_frame)
+                s = s->get_scene();
 
-            // if (s->start_frame <= this->current_frame && this->current_frame - s->start_frame < s->duration_frames) {
             s->_update_state();
-            // }
         }
 
         background_update();
@@ -271,6 +311,12 @@ public:
             last_scene_is_a_group = true;
         }
         return sg;
+    }
+
+    SceneBuilder* add_scene_builder(std::function<void(SceneGroup*)> f) {
+        SceneBuilder* sb = new SceneBuilder(f);
+        add_scene_after_last(sb);
+        return sb;
     }
 
     StatelessScene* add_scene(StatelessScene* scene) {
