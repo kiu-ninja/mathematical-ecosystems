@@ -8,9 +8,10 @@ namespace Interpolate {
     template<typename T>
     struct EaseScene: public StatelessScene { using StatelessScene::StatelessScene;
         T* object;
-        T initial, target, current;
+        T initial, target;
         Mode mode;
         Behavior behavior;
+        float current = 0;
 
         virtual void start() {
             initial = *object;
@@ -21,8 +22,6 @@ namespace Interpolate {
                 case RELATIVE_FACTOR: target = *object * target; break;
                 default: break;
             }
-
-            current = target - target;
         }
 
         EaseScene(T* _object, T _target, Mode _mode, Behavior _behavior) {
@@ -46,9 +45,8 @@ namespace Interpolate {
                 default:         /*-------------------------------*/ break;
             }
 
-            T next = _t * (target - initial);
-            *object = *object + (next - current);
-            current = next;
+            *object = *object + (target - initial) * (_t - current);
+            current = _t;
         }
     };
 
