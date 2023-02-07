@@ -9,15 +9,13 @@ public class Game : MonoBehaviour
     public bool chooseByRandom = true;
     public float randAlive = 0.8f;
     public float timerMax = 1f;
-    
-    private float timer = 0f;
-
     public Cell prefab;
 
-    private Dictionary<int2, Cell> cellMap;
-
+    private float timer = 0f;
     private int lx = 0;
     private int ly = 0;
+
+    private Dictionary<int2, Cell> cellMap;
 
     void Start()
     {
@@ -49,9 +47,10 @@ public class Game : MonoBehaviour
                 {
                     int2 newCoordinates = new int2(cellInfo.Key.x + k1, cellInfo.Key.y + k2);
 
-                    if (!tempCellMap.ContainsKey(newCoordinates))
+                    if (!tempCellMap.ContainsKey(newCoordinates) && cellInfo.Value.alive)
                     {
                         Cell newCell = Instantiate(prefab, new Vector3(newCoordinates.x, newCoordinates.y, 1), Quaternion.identity);
+                        newCell.SetAlive(false);
                         tempCellMap[newCoordinates] = newCell;
                     }
                 }
@@ -62,26 +61,21 @@ public class Game : MonoBehaviour
 
         foreach (var item in cellMap)
         {
-            Cell cell = item.Value;
+            ApplyRules(item.Key, item.Value);
+        }
 
-            int cnt = GetNeighbours(item.Key);
-
-            if (cnt == 3 && !cell.alive) cell.SetAlive(true);
-            else if ((cnt == 2 || cnt == 3) && cell.alive) cell.SetAlive(true);
-            else
-            {
-                cell.SetAlive(false);
-            }
+        foreach (var item in cellMap)
+        {
+            item.Value.SetAlive(item.Value.possibleValue);
         }
     }
 
-    public void ApplyRules(int2 cooridnates, ref Cell cell)
+    public void ApplyRules(int2 cooridnates, Cell cell)
     {
         int cnt = GetNeighbours(cooridnates);
 
-        if (cnt == 3 && !cell.alive) cell.SetAlive(true);
-        if ((cnt == 2 || cnt == 3) && cell.alive) cell.SetAlive(true);
-        else cell.SetAlive(false);
+        if (cell.alive && cnt != 2 && cnt != 3) cell.possibleValue = false;
+        else if (!cell.alive && cnt == 3) cell.possibleValue = true;
     }
 
     public int GetNeighbours(int2 coordinates)
@@ -128,8 +122,8 @@ public class Game : MonoBehaviour
             Vector3 positionOfNewCell = Camera.main.ScreenToWorldPoint(positionOfClick);
             float x = positionOfNewCell.x;
             float y = positionOfNewCell.y;
-
-            if(x < 0)
+            
+            if (x < 0)
             {
                 x--;
             }
@@ -138,27 +132,32 @@ public class Game : MonoBehaviour
                 y--;
             }
 
-            if (lx == (int)x && ly == (int)y) return;
+
+            if ((lx == (int)x) && (ly == (int)y)) return;
 
             lx = (int)x;
             ly = (int)y;
 
-            updateCell((int)x, (int)y);
-            Debug.Log(positionOfNewCell);
+            Debug.Log((int)x);
+            Debug.Log(lx);
+            Debug.Log((int)y);
+            Debug.Log(ly);
+
+            updateCell(new int2((int)x, (int)y));
         }
     }
 
-    private void updateCell(int x, int y)
+    private void updateCell(int2 coordinates)
     {
-        if (cellMap.ContainsKey(new int2(x, y)))
+        if (cellMap.ContainsKey(coordinates))
         {
-            cellMap[new int2(x, y)].Reverse();
+            cellMap[coordinates].Reverse();
         }
         else
         {
-            Cell cell = Instantiate(prefab, new Vector3(x, y, 1), Quaternion.identity);
+            Cell cell = Instantiate(prefab, new Vector3(coordinates.x, coordinates.y, 1), Quaternion.identity);
             cell.SetAlive(true);
-            cellMap[new int2(x, y)] = cell;
+            cellMap[coordinates] = cell;
         }
     }
 }

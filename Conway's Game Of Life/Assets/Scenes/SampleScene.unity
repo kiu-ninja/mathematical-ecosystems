@@ -251,9 +251,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxHeight: 20
   maxWidth: 20
-  chooseByRandom: 1
+  chooseByRandom: 0
   randAlive: 0.2
-  timerMax: 5
+  timerMax: 0.3
   prefab: {fileID: -7781676135018945630, guid: 45e33db4a85dd2e428a7bbfbdcf40388, type: 3}
 --- !u!4 &1553380045
 Transform:
