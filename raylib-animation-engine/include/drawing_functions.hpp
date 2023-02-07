@@ -126,3 +126,27 @@ void draw_rectangle_circle_bounded(const Rectangle &r, const Circle &c, const Co
     draw_line_circle_bounded({x1, y1}, {x1, y2}, c, col);  //  LEFT
     draw_line_circle_bounded({x2, y1}, {x2, y2}, c, col);  //  RIGHT
 }
+
+void draw_line_segment_outline_bounded(const Rectangle &r, const std::vector<Vector2> &points, const float &t, const Color &col) {
+    float lengths[points.size()];
+    float total_length = 0;
+    for (int i = 0; i < points.size(); i++) {
+        lengths[i] = length(points[i] - points[(i + 1) % points.size()]);
+        total_length += lengths[i];
+    }
+
+    total_length *= t;
+    for (int i = 0; i < points.size(); i++) {
+        if (total_length < lengths[i]) {
+            draw_line_rectangle_bounded(points[i], points[i] + (points[(i + 1) % points.size()] - points[i]) * total_length / lengths[i], r, col);
+            break;
+        }
+
+        draw_line_rectangle_bounded(points[i], points[(i + 1) % points.size()], r, col);
+        total_length -= lengths[i];
+    }
+}
+
+void draw_line_segment_outline(const std::vector<Vector2> &points, const float &t, const Color &col) {
+    draw_line_segment_outline_bounded(Rectangle {-10, -10, 1000000, 1000000}, points, t, col);
+}

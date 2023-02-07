@@ -47,7 +47,7 @@ namespace Drawable {
         Drawable(Vector2 _position) : position(_position) {}
         Drawable(Vector2 _position, Vector2 _dimensions) : position(_position), dimensions(_dimensions) {};
 
-        void draw() {};
+        virtual void draw() {};
 
         template<typename Data>
         struct DrawableTransformScene: public StatelessScene { using StatelessScene::StatelessScene;
@@ -74,7 +74,7 @@ namespace Drawable {
             );
         }
 
-        StatelessScene* translate(const Vector2 &offset) {
+        virtual StatelessScene* translate(const Vector2 &offset) {
             return Interpolate::interpolate<Vector2>(
                 &this->position, 
                 offset, 
@@ -83,7 +83,7 @@ namespace Drawable {
             );
         }
 
-        StatelessScene* scale(const Vector2 &factor) {
+        virtual StatelessScene* scale(const Vector2 &factor) {
             return Interpolate::interpolate<Vector2>(
                 &this->dimensions, 
                 factor, 
@@ -91,11 +91,31 @@ namespace Drawable {
                 Interpolate::Behavior::RELATIVE_FACTOR
             );
         }
+
+        virtual StatelessScene* scale(const float &factor) {
+            return scale(Vector2 { factor, factor });
+        }
+
+        virtual Vector2 closest_point(Vector2 point) {
+            Vector2 delta = point - position;
+            Vector2 ratio = normalized(delta / dimensions * 2);
+
+            if (abs(ratio.x) <= abs(ratio.y)) {
+                return position + Vector2 {
+                    ratio.x / abs(ratio.y) * dimensions.x / 2,
+                    dimensions.y / 2 * (delta.y >= 0 ? 1 : -1)
+                };
+            } else {
+                return position + Vector2 {
+                    dimensions.x / 2 * (delta.x >= 0 ? 1 : -1),
+                    ratio.y / abs(ratio.x) * dimensions.y / 2
+                };
+            }
+        }
     };
 
 
     // 
-
 
     template<typename T>
     struct Group: public Drawable {
@@ -108,37 +128,84 @@ namespace Drawable {
         }
 
         T* operator[](const int &i) {
-            return objects[i];
+            if (i >= objects.size()) {
+                while (objects.size() < i + 1) {
+                    objects.push_back(new T());
+                }
+            }
+            return (T*)objects[i];
         }
 
-        SceneGroup* translate(const Vector2 &offset) {
+        SceneGroup* translate(const Vector2 &offset) override {
             SceneGroup* scenes = new SceneGroup();
 
             for (T* object : objects) {
-                scenes->add(object->translate(offset));
+                scenes->merge(object->translate(offset));
             }
 
             return scenes;
         }
 
-        SceneGroup* scale(const Vector2 &factor) {
+        SceneGroup* scale(const float &factor) override {
+            return scale(Vector2 { factor, factor });
+        }
+
+        SceneGroup* scale(const Vector2 &factor) override {
+            SceneGroup* res = space_out(factor);
+            for (T* object : objects) {
+                res->merge(object->scale(factor));
+            }
+            return res;
+        }
+
+        /// @brief Scales the distance between objects but doesn't scale the objects themselves
+        /// @param factor 
+        /// @return SceneGroup*
+        SceneGroup* space_out(const float &factor) {
+            return space_out(Vector2 { factor, factor });
+        }
+
+        /// @brief Scales the distance between objects but doesn't scale the objects themselves
+        /// @param factor 
+        /// @return SceneGroup*
+        SceneGroup* space_out(const Vector2 &factor) {
+            struct DrawableGroupScaleScene: public SceneGroup {
+                using SceneGroup::SceneGroup;
+
+                std::vector<T*> objects;
+                Vector2 pivot, factor;
+
+                void start() override {
+                    for (T* object : objects) {
+                        // this->merge(object->scale(factor));
+                        this->merge(object->translate((object->position - pivot) * (factor - Vector2 { 1, 1 })));
+                    }
+                }
+
+                void update_state(const float &t) override {
+
+                }
+            };
+
             Vector2 center = Vector2 { 0, 0 };
             for (T* object : objects) {
                 center += object->position;
             }
             center = center / objects.size();
 
-            SceneGroup* scenes = new SceneGroup();
+            DrawableGroupScaleScene* res = new DrawableGroupScaleScene();
 
+            res->objects = this->objects;
+            res->pivot = center;
+            res->factor = factor;
+
+            return res;
+        }
+
+        void draw() override {
             for (T* object : objects) {
-                scenes->add(object->scale(factor));
-                scenes->add(object->translate(Vector2 {
-                    (center.x - object->position.x) * factor.x,
-                    (center.y - object->position.y) * factor.y
-                }));
+                object->draw();
             }
-
-            return scenes;
         }
     };
 
@@ -171,7 +238,7 @@ namespace Drawable {
             }, circle_offset, visibility);
         }
 
-        void draw() {
+        virtual void draw() override {
             draw_rectangle_circle_bounded(
                 this->get_rect(),
                 this->get_occluder(), 
@@ -196,7 +263,7 @@ namespace Drawable {
         }
 
         Rectangle get_fill_rect() {
-            return get_rect_padded(6);
+            return get_rect_padded(dimensions.x / 10);
         }
 
         Color get_stroke_col() {
@@ -235,16 +302,18 @@ namespace Drawable {
             );
         }
 
-        void draw() {
-            draw_rectangle_circle_bounded(
-                this->get_stroke_rect(), 
-                this->get_occluder(), 
-                this->get_stroke_col()
-            );
-            DrawRectangleRec(
-                this->get_fill_rect(), 
-                this->get_fill_col()
-            );
+        void draw() override {
+            if (visibility > 0)
+                draw_rectangle_circle_bounded(
+                    this->get_stroke_rect(), 
+                    this->get_occluder(), 
+                    this->get_stroke_col()
+                );
+            if (alive * visibility > 0)
+                DrawRectangleRec(
+                    this->get_fill_rect(), 
+                    this->get_fill_col()
+                );
         }
     };
 
@@ -290,6 +359,12 @@ namespace Drawable {
             }
         }
 
+        Rectangle get_background_rect() {
+            Vector2 s = Vector2 { (float)width * font_size / 2, (float)height * font_size };
+            Vector2 p = this->position - s / 2;
+            return padded_rectangle(Rectangle { p.x, p.y, s.x, s.y }, -font_size / 2);
+        }
+
         Vector2 get_pos() {
             return this->position - Vector2 { (float)width * font_size / 4, (float)height * font_size / 2 };
         }
@@ -322,15 +397,68 @@ namespace Drawable {
             return Interpolate::interpolate<float>(&this->alpha, 0, Interpolate::Mode::CUBIC_CUBIC, Interpolate::Behavior::STATIC);
         }
 
-        void draw() {
-            DrawTextEx(
-                this->font, 
-                this->get_string().c_str(), 
-                this->get_pos(), 
-                this->font_size, 
-                0, 
-                Color{ col.r, col.g, col.b, (unsigned char)(clamp(alpha * 255, 0.0f, 255.0f)) }
-            );
+        void draw() override {
+            if (t > 0 && alpha > 0) {
+                DrawRectangleRec(get_background_rect(), Color{ 0, 0, 0, (unsigned char)(clamp(alpha * 255, 0.0f, 255.0f)) });
+                DrawTextEx(
+                    this->font, 
+                    this->get_string().c_str(), 
+                    this->get_pos(), 
+                    this->font_size, 
+                    0, 
+                    Color{ col.r, col.g, col.b, (unsigned char)(clamp(alpha * 255, 0.0f, 255.0f)) }
+                );
+            }
+        }
+    };
+
+    struct Arrow: public Drawable {
+        Color col = WHITE;
+        float weight = 4, head_size = 20;
+        float visibility = 0;
+
+        Drawable *_from = this, *_to = this;
+
+        using Drawable::Drawable;
+
+        Arrow* from(Drawable* object) {
+            this->_from = object;
+
+            return this;
+        }
+
+        Arrow* to(Drawable* object) {
+            this->_to = object;
+
+            return this;
+        }
+
+        StatelessScene* appear() {
+            return Interpolate::interpolate<float>(&this->visibility, 1, Interpolate::Mode::CUBIC_CUBIC, Interpolate::Behavior::STATIC);
+        }
+
+        StatelessScene* disappear() {
+            return Interpolate::interpolate<float>(&this->visibility, 0, Interpolate::Mode::CUBIC_CUBIC, Interpolate::Behavior::STATIC);
+        }
+
+        void draw() override {
+            if (visibility > 0) {
+                Vector2 pos = this->_from->closest_point(this->_to->position);
+                Vector2 dim = this->_to->closest_point(this->_from->position) - pos;
+
+                std::vector<Vector2> points;
+                Vector2 n = normal(normalized(dim));
+                points.push_back(pos + weight * n / 2);
+                points.push_back(pos - weight * n / 2);
+                points.push_back(pos - weight * n / 2 + dim - normal(-n) * head_size);
+                points.push_back(pos - weight * n / 2 + dim - normal(-n) * head_size);
+                points.push_back(pos - n * head_size / 2 + dim - normal(-n) * head_size);
+                points.push_back(pos + dim);
+                points.push_back(pos + n * head_size / 2 + dim - normal(-n) * head_size);
+                points.push_back(pos + weight * n / 2 + dim - normal(-n) * head_size);
+
+                draw_line_segment_outline(points, visibility, col);
+            }
         }
     };
 }; 
