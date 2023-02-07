@@ -10,9 +10,12 @@
 
 struct ConwaysState {
     Drawable::GridCell* _life_grid[LG_SIZE][LG_SIZE];
+    Drawable::Group<Drawable::GridCell> neighbors;
     Drawable::Group<Drawable::GridCell> cells;
     Drawable::String subtitle_text;
     int simulation_speed = 10;
+
+    Drawable::Group<Drawable::Arrow> arrows;
 
     Drawable::GridCell* life_grid(int x, int y) {
         return _life_grid[(y + LG_HALF) % LG_SIZE][(x + LG_HALF) % LG_SIZE];
@@ -32,14 +35,23 @@ struct ConwaysState {
                 );
                 cells.add(cell);
                 _life_grid[i][j] = cell;
-                // cell->alive = rand() % 2 == 0 ? 1.0f : 0.0f;
+                cell->alive = rand() % 2 == 0 ? 1.0f : 0.0f;
             }
         }
-        life_grid(0, 1)->alive = 1;
-        life_grid(1, 0)->alive = 1;
-        life_grid(0, -1)->alive = 1;
-        life_grid(1, 1)->alive = 1;
-        life_grid(-1, 1)->alive = 1;
+        life_grid(-3, -2)->alive = 1;
+        life_grid(-2, -3)->alive = 1;
+        life_grid(-3, -4)->alive = 1;
+        life_grid(-2, -2)->alive = 1;
+        life_grid(-4, -2)->alive = 1;
+
+        neighbors.add(life_grid(-1, -1));
+        neighbors.add(life_grid(0, -1));
+        neighbors.add(life_grid(1, -1));
+        neighbors.add(life_grid(1, 0));
+        neighbors.add(life_grid(1, 1));
+        neighbors.add(life_grid(0, 1));
+        neighbors.add(life_grid(-1, 1));
+        neighbors.add(life_grid(-1, 0));
     }
 };
 
@@ -57,7 +69,7 @@ struct SetNeighborsAlive: public Scene<ConwaysState> { using Scene::Scene;
         return this;
     }
 
-    void update_state(ApplicationWithState<ConwaysState> &a, const float &t) {
+    void update_state(const float &t) override {
 
     }
 };
@@ -65,8 +77,8 @@ struct SetNeighborsAlive: public Scene<ConwaysState> { using Scene::Scene;
 struct ConwaysSimulation: public Scene<ConwaysState> { using Scene::Scene;
     int frame_count = 0;
 
-    void update_state(ApplicationWithState<ConwaysState> &a, const float &t) {
-        if (frame_count > a.state.simulation_speed) {
+    void update_state(ApplicationWithState<ConwaysState> *a, const float &t) {
+        if (a->state.simulation_speed > 0 && frame_count > a->state.simulation_speed) {
             int neighbor_counts[LG_SIZE + 2][LG_SIZE + 2];
             for (int i = 0; i < LG_SIZE + 2; i++) {
                 for (int j = 0; j < LG_SIZE + 2; j++) {
@@ -76,7 +88,7 @@ struct ConwaysSimulation: public Scene<ConwaysState> { using Scene::Scene;
 
             for (int i = 0; i < LG_SIZE; i++) {
                 for (int j = 0; j < LG_SIZE; j++) {
-                    if (a.state._life_grid[i][j]->alive > 0.5f) {
+                    if (a->state._life_grid[i][j]->alive > 0.5f) {
                         for (int p = 0; p < 3; p++) {
                             for (int q = 0; q < 3; q++) {
                                 neighbor_counts[i + p][j + q]++;
@@ -88,13 +100,13 @@ struct ConwaysSimulation: public Scene<ConwaysState> { using Scene::Scene;
 
             for (int i = 0; i < LG_SIZE; i++) {
                 for (int j = 0; j < LG_SIZE; j++) {
-                    if (a.state._life_grid[i][j]->alive > 0.5f) {
+                    if (a->state._life_grid[i][j]->alive > 0.5f) {
                         if (neighbor_counts[i + 1][j + 1] - 1 != 2 && neighbor_counts[i + 1][j + 1] - 1 != 3) {
-                            a.state._life_grid[i][j]->alive = 0.0f;
+                            a->state._life_grid[i][j]->alive = 0.0f;
                         }
                     } else {
                         if (neighbor_counts[i + 1][j + 1] == 3) {
-                            a.state._life_grid[i][j]->alive = 1.0f;
+                            a->state._life_grid[i][j]->alive = 1.0f;
                         }
                     }
                 }
@@ -121,14 +133,34 @@ public:
     }
 
     void scene_setup() {
-        // add_scene((new ConwaysSimulation()))->set_duration(1000);
+        new_scene_group()->set_duration(1);
+        for (int i = 0; i < LG_SIZE*LG_SIZE; i++) {
+            add_scene_to_last(((Drawable::GridCell*)state.cells[i])->animate_visibility(1));//->wait(0.017f * (i % 10 == 0));
+            add_scene_to_last(state.cells[i]->scale(0.8));
+        }
 
-        add_scene(state.cells[0]->animate_visibility(1))->set_duration(1);
-        for (int i = 0; i < LG_SIZE*LG_SIZE; i++)
-            add_scene_with_last(state.cells[i]->animate_visibility(1));//->wait(0.017f * (i % 10 == 0));
+        add_scene_after_last(state.cells.scale(4.0f)->set_duration(3));
+        // merge_scene_with_last(Interpolate::interpolate<int>(&state.simulation_speed, 30, Interpolate::Mode::LINEAR, Interpolate::Behavior::STATIC));
+        // add_scene_after_last(Interpolate::interpolate<int>(&state.simulation_speed, -1, Interpolate::Mode::LINEAR, Interpolate::Behavior::STATIC))->set_duration_frames(2);
+        new_scene_group()->set_duration(2);
+        for (int i = -LG_HALF; i <= LG_HALF; i++) {
+            for (int j = -LG_HALF; j <= LG_HALF; j++) {
+                if (!(abs(i) <= 1 && abs(j) <= 1))
+                    merge_scene_with_last(state.life_grid(i, j)->animate_visibility(0));
+            }
+        }
 
-        add_scene_after_last(state.cells.scale(Vector2 { 6.0f, 6.0f }))->set_duration(2);
-        add_scene_with_last(Interpolate::interpolate<int>(&state.simulation_speed, 60, Interpolate::Mode::LINEAR, Interpolate::Behavior::STATIC));
+        new_scene_group()->set_duration(2);
+        merge_scene_with_last(state.neighbors.space_out(2.0f))->set_duration(1);
+        for (int i = 0; i < 8; i++)
+            merge_scene_with_last(state.arrows[i]->from(state.life_grid(0, 0))->to(state.neighbors[i])->appear());
+
+        new_scene_group()->wait(1)->set_duration(2);
+        merge_scene_with_last(state.neighbors.space_out(0.5f))->set_duration(1);
+        for (int i = 0; i < 8; i++)
+            merge_scene_with_last(state.arrows[i]->disappear());
+
+        add_scene((new ConwaysSimulation()))->set_duration(100000);
     }
 
     void background_update() { };
@@ -136,11 +168,9 @@ public:
     void draw() {
         ClearBackground(BLACK);
 
-        for (int i = 0; i < LG_SIZE*LG_SIZE; i++) {
-            state.cells[i]->draw();
-        }
-
+        state.cells.draw();
         state.subtitle_text.draw();
+        state.arrows.draw();
         // state.hint_text.draw();
     }
 }; 

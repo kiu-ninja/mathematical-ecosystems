@@ -12,9 +12,14 @@ template <typename S> class ApplicationWithState: public Application {
 
 struct StatelessScene {
     int start_frame = 0;
-    int duration_frames = 1;
+    int duration_frames = 2;
 
     ApplicationData app_data;
+    Application* app; 
+
+    virtual void _set_application_pointer(Application* application) {
+        app = application;
+    }
 
     StatelessScene() {}
     StatelessScene(const float &duration_seconds) {
@@ -36,10 +41,11 @@ struct StatelessScene {
         }
     }
     
-    virtual void _start(Application* application) {
-        app_data = application->app_data;
+    virtual void _start() {
+        app_data = app->app_data;
 
         start();
+        _update_state();
     };
 
     StatelessScene* after(StatelessScene* other) {
@@ -55,13 +61,16 @@ struct StatelessScene {
     }
 
     StatelessScene* wait(const float &delay_seconds) {
-        this->set_start_frames(start_frame + delay_seconds * 60);
+        return this->wait_frames(delay_seconds * 60);
+    }
+
+    virtual StatelessScene* wait_frames(const float &delay_seconds) {
+        this->set_start_frames(start_frame + delay_seconds);
         return this;
     }
 
     virtual StatelessScene* set_duration(const float &duration_seconds) {
-        duration_frames = duration_seconds * 60;
-        return this;
+        return this->set_duration_frames(duration_seconds * 60);
     }
 
     virtual StatelessScene* set_duration_frames(const int &_duration_frames) {
@@ -70,28 +79,24 @@ struct StatelessScene {
     }
 
     virtual StatelessScene* set_start(const float &start_seconds) {
-        start_frame = start_seconds * 60;
-        return this;
+        return this->set_start_frames(start_seconds * 60);
     }
 
     virtual StatelessScene* set_start_frames(const int &_start_frame) {
         start_frame = _start_frame;
         return this;
     }
-
-    virtual void _update_state(Application* application) {
-        float t = (float)(application->current_frame - start_frame) / (duration_frames - 1);
     
-        update_state(t);
+    virtual void _update_state() {
+        if (this->start_frame < app->current_frame && app->current_frame - this->start_frame < this->duration_frames) {
+            float t = (float)(app->current_frame - start_frame + 1) / (duration_frames);
+        
+            update_state(t);
+        }
     }
 
-    virtual void update_state(const float &t) {
-        // std::cout << "update_state() NOT IMPLEMENTED\n";
-    };
-
-    virtual void start() {
-        // std::cout << "start() NOT IMPLEMENTED\n";
-    }
+    virtual void update_state(const float &t) { };
+    virtual void start() { };
 };
 
 template <typename S> struct Scene: public StatelessScene {
@@ -99,82 +104,103 @@ template <typename S> struct Scene: public StatelessScene {
 
     using StatelessScene::StatelessScene;
 
-    void _start(Application* application) override {
-        app_data = application->app_data;
+    void _start() override  {
+        app_data = this->app->app_data;
 
         start();
-        start(((ApplicationWithState<S>*)application)->state);
+        start(((ApplicationWithState<S>*)this->app)->state);
+        _update_state();
     };
 
-    void _update_state(Application* application) override {
-        const float t = (float)(application->current_frame - start_frame) / (duration_frames - 1);
-    
-        update_state(t);
-        update_state(*(ApplicationWithState<S>*)application, t);
+    void _update_state() override {
+        if (this->start_frame < this->app->current_frame && this->app->current_frame - this->start_frame < this->duration_frames) {
+            const float t = (float)(this->app->current_frame - start_frame + 1) / (duration_frames);
+        
+            update_state(t);
+            update_state((ApplicationWithState<S>*)app, t);
+        }
     }
     
-    virtual void update_state(ApplicationWithState<S> &application, const float &t) {
-        // std::cout << "update_state() NOT IMPLEMENTED\n";
-    }
-
-    virtual void update_state(const float &t) override {
-        // std::cout << "update_state() NOT IMPLEMENTED\n";
-    };
-
-    virtual void start(S &state) {
-        // std::cout << "start() NOT IMPLEMENTED\n";
-    }
-
-    virtual void start() override {
-        // std::cout << "start() NOT IMPLEMENTED\n";
-    }
+    virtual void update_state(ApplicationWithState<S>* application, const float &t) { };
+    virtual void update_state(const float &t) override { };
+    virtual void start(S &state) { };
+    virtual void start() override { };
 };
 
 struct SceneGroup: public StatelessScene {
     using StatelessScene::StatelessScene;
 
     std::vector<StatelessScene*> scenes;
+    std::vector<bool> merged;
 
-    SceneGroup* add(StatelessScene* scene) {
+    void _set_application_pointer(Application* application) override {
+        app = application;
+
+        for (int i = 0; i < scenes.size(); i++) {
+            scenes[i]->_set_application_pointer(application);
+        }
+    }
+
+    SceneGroup(std::vector<StatelessScene*> _scenes) {
+        for (StatelessScene* scene : _scenes) {
+            merge(scene);
+        }
+    }
+
+    SceneGroup* merge(StatelessScene* scene) {
         scene->set_duration_frames(this->duration_frames);
         scene->set_start_frames(this->start_frame);
+        merged.push_back(true);
+        return insert(scene);
+    }
+
+
+    SceneGroup* insert(StatelessScene* scene) {
+        scene->_set_application_pointer(this->app);
+        if (merged.size() == scenes.size()) {
+            scene->set_start_frames(start_frame);
+            merged.push_back(false);
+        }
+
         scenes.push_back(scene);
         return this;
     }
 
-    StatelessScene* set_duration(const float &duration_seconds) override {
-        this->duration_frames = duration_seconds * 60;
-        for (StatelessScene* scene : scenes) scene->set_duration(duration_seconds);
-        return this;
-    }
+    SceneGroup* set_duration_frames(const int &_duration_frames) override {
+        for (int i = 0; i < scenes.size(); i++) {
+            if (merged[i])
+                scenes[i]->set_duration_frames(_duration_frames);
+        }
 
-    StatelessScene* set_duration_frames(const int &_duration_frames) override {
         duration_frames = _duration_frames;
-        for (StatelessScene* scene : scenes) scene->set_duration_frames(_duration_frames);
         return this;
     }
 
-    StatelessScene* set_start(const float &start_seconds) override {
-        start_frame = start_seconds * 60;
-        for (StatelessScene* scene : scenes) scene->set_start(start_seconds);
-        return this;
+    SceneGroup* set_duration(const float &duration_seconds) override {
+        return set_duration_frames(duration_seconds * 60);
     }
 
-    StatelessScene* set_start_frames(const int &_start_frame) override {
+    SceneGroup* set_start(const float &start_seconds) override {
+        return set_start_frames(start_seconds * 60);
+    }
+
+    SceneGroup* set_start_frames(const int &_start_frame) override {
+        int d = _start_frame - start_frame;        
         start_frame = _start_frame;
-        for (StatelessScene* scene : scenes) scene->set_start_frames(_start_frame);
+        for (StatelessScene* scene : scenes) scene->wait_frames(d);
         return this;
     }
 
-    void _start(Application* application) override {
+    void _start() override {
+        this->start();
         for (StatelessScene* scene : scenes) {
-            scene->_start(application);
+            scene->_start();
         }
     }
 
-    void _update_state(Application* application) override {
+    void _update_state() override {
         for (StatelessScene* scene : scenes) {
-            scene->_update_state(application);
+            scene->_update_state();
         }
     }
 };
@@ -184,6 +210,7 @@ struct SceneGroup: public StatelessScene {
 template <typename S> class Stage: public ApplicationWithState<S> {
 public:
     std::vector<StatelessScene*> scenes;
+    bool last_scene_is_a_group = false;
 
 public:
     Stage(int window_width, int window_height, const char* name) : 
@@ -198,30 +225,66 @@ public:
     void update() {
         for (StatelessScene* s : scenes) {
             if (s->start_frame == this->current_frame) {
-                s->_start(this);
+                s->_start();
             }
 
-            if (s->start_frame <= this->current_frame && this->current_frame - s->start_frame < s->duration_frames) {
-                s->_update_state(this);
-            }
+            // if (s->start_frame <= this->current_frame && this->current_frame - s->start_frame < s->duration_frames) {
+            s->_update_state();
+            // }
         }
 
         background_update();
     }
 
     StatelessScene* add_scene_after_last(StatelessScene* scene) {
-        add_scene(scene->after(last_scene()));
-        return scene;
+        if (scenes.size() == 0)
+            return add_scene(scene);
+
+        return add_scene(scene->after(last_scene()));
     }
 
-    StatelessScene* add_scene_with_last(StatelessScene* scene) {
-        add_scene(scene->with(last_scene()));
-        return scene;
+    SceneGroup* merge_scene_with_last(StatelessScene* scene) {
+        if (last_scene_is_a_group) {
+            ((SceneGroup *)last_scene())->merge(scene);
+        } else {
+            SceneGroup* sg = (SceneGroup *)(new SceneGroup())->with(last_scene());
+            sg->_set_application_pointer(this);
+            sg->merge(last_scene());
+            sg->merge(scene);
+            scenes[scenes.size() - 1] = sg;
+            last_scene_is_a_group = true;
+        }
+        return (SceneGroup*)last_scene();
+    }
+
+    SceneGroup* add_scene_to_last(StatelessScene* scene) {
+        SceneGroup* sg;
+        if (last_scene_is_a_group) {
+            sg = (SceneGroup *)last_scene();
+            sg->insert(scene);
+        } else {
+            sg = new SceneGroup();//->with(last_scene());
+            sg->_set_application_pointer(this);
+            sg->insert(last_scene());
+            sg->insert(scene);
+            scenes[scenes.size() - 1] = sg;
+            last_scene_is_a_group = true;
+        }
+        return sg;
     }
 
     StatelessScene* add_scene(StatelessScene* scene) {
+        last_scene_is_a_group = false;
+        scene->_set_application_pointer(this);
         scenes.push_back(scene);
         return scene;
+    }
+
+    SceneGroup* new_scene_group() {
+        SceneGroup* sg = new SceneGroup();
+        add_scene_after_last(sg);
+        last_scene_is_a_group = true;
+        return sg;
     }
 
     StatelessScene* last_scene() {
