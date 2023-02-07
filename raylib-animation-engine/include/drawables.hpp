@@ -3,7 +3,7 @@
 #include "raylib.h"
 #include "random.hpp"
 #include "easing.hpp"
-#include "vectors.h"
+#include "vectors.hpp"
 #include "stage.hpp"
 #include "circle.hpp"
 #include "drawing_functions.hpp"
@@ -48,22 +48,6 @@ namespace Drawable {
         Drawable(Vector2 _position, Vector2 _dimensions) : position(_position), dimensions(_dimensions) {};
 
         virtual void draw() {};
-
-        template<typename Data>
-        struct DrawableTransformScene: public StatelessScene { using StatelessScene::StatelessScene;
-            Drawable* object;
-            Data initial, target;
-
-            DrawableTransformScene* set_object(Drawable* _object) {
-                object = _object;
-                return this;
-            }
-
-            DrawableTransformScene* set_target(const Data _target) {
-                target = _target;
-                return this;
-            }
-        };
 
         StatelessScene* move_to(const Vector2 &destination) {
             return Interpolate::interpolate<Vector2>(
@@ -127,6 +111,10 @@ namespace Drawable {
             objects.push_back(object);
         }
 
+        int size() {
+            return objects.size();
+        }
+
         T* operator[](const int &i) {
             if (i >= objects.size()) {
                 while (objects.size() < i + 1) {
@@ -137,13 +125,13 @@ namespace Drawable {
         }
 
         SceneGroup* translate(const Vector2 &offset) override {
-            SceneGroup* scenes = new SceneGroup();
+            SceneGroup* sg = new SceneGroup();
 
             for (T* object : objects) {
-                scenes->merge(object->translate(offset));
+                sg->merge(object->translate(offset));
             }
 
-            return scenes;
+            return sg;
         }
 
         SceneGroup* scale(const float &factor) override {
@@ -325,12 +313,12 @@ namespace Drawable {
         std::string text;
         Font font;
         Color col = WHITE;
-        float alpha = 1;
+        float alpha = 0;
 
         int width, height;
 
         int font_size;
-        float t = 0;
+        float t = 1;
 
         String() {}
         String(std::string _text) {
@@ -370,7 +358,20 @@ namespace Drawable {
         }
 
         StatelessScene* write(const std::string &target_text) {
-            struct AnimateAlive: public DrawableTransformScene<std::string> { using DrawableTransformScene<std::string>::DrawableTransformScene;
+            struct DrawableStringWirteScene: public StatelessScene { using StatelessScene::StatelessScene;
+                Drawable* object;
+                std::string initial, target;
+
+                DrawableStringWirteScene* set_object(Drawable* _object) {
+                    object = _object;
+                    return this;
+                }
+
+                DrawableStringWirteScene* set_target(const std::string _target) {
+                    target = _target;
+                    return this;
+                }
+                
                 void start() {
                     ((String *)this->object)->update_text(this->target);
                     ((String *)this->object)->t = 0;
@@ -381,7 +382,7 @@ namespace Drawable {
                 }
             };
 
-            AnimateAlive* res = new AnimateAlive(1.0f);
+            DrawableStringWirteScene* res = new DrawableStringWirteScene(1.0f);
             res->set_target(target_text);
             res->set_object(this);
             ((StatelessScene*)res)->set_duration(target_text.size() / 10.0f);
@@ -399,7 +400,25 @@ namespace Drawable {
 
         void draw() override {
             if (t > 0 && alpha > 0) {
-                DrawRectangleRec(get_background_rect(), Color{ 0, 0, 0, (unsigned char)(clamp(alpha * 255, 0.0f, 255.0f)) });
+                DrawTextEx(
+                    this->font, 
+                    this->get_string().c_str(), 
+                    this->get_pos(), 
+                    this->font_size, 
+                    0, 
+                    Color{ col.r, col.g, col.b, (unsigned char)(clamp(alpha * 255, 0.0f, 255.0f)) }
+                );
+            }
+        }
+    };
+
+    struct CircledString: public String {
+        using String::String;
+
+        void draw() override {
+            if (t > 0 && alpha > 0) {
+                DrawCircleV(position, length(this->get_pos() - position) + font_size / 3, Color{ col.r, col.g, col.b, (unsigned char)(clamp(alpha * 255, 0.0f, 255.0f)) });
+                DrawCircleV(position, length(this->get_pos() - position) + font_size / 3 - 2, Color{ 0, 0, 0, (unsigned char)(clamp(alpha * 255, 0.0f, 255.0f)) });
                 DrawTextEx(
                     this->font, 
                     this->get_string().c_str(), 
