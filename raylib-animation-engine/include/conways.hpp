@@ -8,20 +8,20 @@
 #define LG_SIZE 61
 #define LG_HALF (LG_SIZE / 2)
 
-using namespace Drawable;
+using namespace Drawables;
 
 struct ConwaysState {
-    Group<GridCell> neighbors;
-    Group<GridCell> cells;
+    Group neighbors;
+    Group cells;
     String subtitle_text;
     int simulation_speed = 30;
 
-    Group<Arrow> arrows;
+    Group arrows;
 
     GridCell* life_grid(int x, int y) {
         int i = (x + LG_HALF) % LG_SIZE;
         int j = (y + LG_HALF) % LG_SIZE;
-        return cells[j * LG_SIZE + i];
+        return cells.get<GridCell>(j * LG_SIZE + i);
     }
 
     ConwaysState() {}
@@ -117,8 +117,8 @@ public:
         add_scene_builder([=] (SceneGroup* sg) {
             /* Show all grid cells */
             for (int i = 0; i < LG_SIZE * LG_SIZE; i++) {
-                sg->merge(state.cells[i]->animate_visibility(1));
-                sg->merge(state.cells[i]->scale(0.9));
+                sg->merge(state.cells.get<GridCell>(i)->animate_visibility(1));
+                sg->merge(state.cells.get<GridCell>(i)->scale(0.9));
             }
         })->set_duration(1)
         ->next_scene( /* Zoom in */ state.cells.scale(4)) ->wait(2)->set_duration(3)
@@ -139,12 +139,12 @@ public:
             /* Space out and draw the arrows from center to the neighbors */
             sg->merge(state.neighbors.space_out(2.0f))->set_duration(1);
             for (int i = 0; i < state.neighbors.size(); i++)
-                sg->merge(state.arrows[i]->from(state.life_grid(0, 0))->to(state.neighbors[i])->appear());
+                sg->merge(state.arrows.get<Arrow>(i)->from(state.life_grid(0, 0))->to(state.neighbors.get<GridCell>(i))->appear());
         }))->set_duration(2)
         ->next_scene(new SceneBuilder([=] (SceneGroup* sg) {
             /* Make the arrows disappear */
             for (int i = 0; i < 8; i++) 
-                sg->merge(state.arrows[i]->disappear());
+                sg->merge(state.arrows.get<Arrow>(i)->disappear());
         }))->set_duration(2)
         ->next_scene(new SceneBuilder([=] (SceneGroup* sg) {        
             /* Bring the neighbors back to the position they were before spacing out */

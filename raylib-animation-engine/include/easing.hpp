@@ -5,10 +5,6 @@ namespace Easing {
         return a + (b - a) * t;
     }
 
-    void linear_in_place(float &a, const float &b, const float &t) {
-        a += (b - a) * t;
-    }
-
     inline float cubic(const float &a, const float &b, const float &t) {
         return linear(a, b, 3 * t * t - 2 * t * t * t);
     }
