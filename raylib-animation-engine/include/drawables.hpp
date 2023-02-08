@@ -35,9 +35,7 @@ namespace Drawable {
         return Circle { o - Vector2{rect.width / 2, rect.height / 2}, Easing::linear(min_d, max_d, t) };
     }
 
-    
     //
-
 
     struct Drawable {
         Vector2 position;
@@ -97,7 +95,6 @@ namespace Drawable {
             }
         }
     };
-
 
     // 
 
@@ -197,9 +194,7 @@ namespace Drawable {
         }
     };
 
-
     //
-
 
     struct Rect: public Drawable {
         Vector2 circle_offset;
@@ -234,10 +229,8 @@ namespace Drawable {
             );
         }
     };
-
     
     //
-
 
     struct GridCell: public Rect {
         Color stroke_col = WHITE;
@@ -305,9 +298,7 @@ namespace Drawable {
         }
     };
 
-
     //
-
 
     struct String: public Drawable {
         std::string text;

@@ -16,6 +16,8 @@ struct StatelessScene {
 
     ApplicationData app_data;
     Application* app; 
+    StatelessScene* _next_scene = nullptr;
+    bool _has_next_scene = false;
 
     virtual void _set_application_pointer(Application* application) {
         app = application;
@@ -51,6 +53,26 @@ struct StatelessScene {
 
         start();
     };
+
+    virtual void _end() {
+        end();
+    }
+
+    StatelessScene* next_scene(StatelessScene* ss) {
+        _has_next_scene = true;
+        _next_scene = ss;
+        return ss;
+    }
+
+    StatelessScene* get_next_scene() {
+        _end();
+
+        if (!_has_next_scene) return this;
+
+        _next_scene->_set_application_pointer(app);
+
+        return _next_scene->wait_frames(app->current_frame + 1);
+    }
 
     StatelessScene* after(StatelessScene* other) {
         // start_frame = other->start_frame + other->duration_frames;
@@ -101,6 +123,7 @@ struct StatelessScene {
 
     virtual void update_state(const float &t) { };
     virtual void start() { };
+    virtual void end() { };
 };
 
 struct DebugScene: public StatelessScene {
@@ -115,6 +138,10 @@ struct DebugScene: public StatelessScene {
 
     void update_state(const float &t) override {
         std::cout << s << " | UPDATE" << "\n";
+    }
+
+    void end() override {
+        std::cout << s << " | END" << "\n";
     }
 };
 
@@ -244,8 +271,16 @@ struct SceneBuilder: public StatelessScene {
         sg->set_start_frames(this->start_frame);
         sg->_set_application_pointer(this->app);
         builder(sg);
+        if (this->_has_next_scene)
+            sg->next_scene(this->_next_scene);
         return sg->get_scene();
     }
+};
+
+struct SceneSequence: public StatelessScene {
+    using StatelessScene::StatelessScene;
+
+    // SceneSequence
 };
 
 // ================
@@ -266,11 +301,18 @@ public:
     }
 
     void update() {
-        for (StatelessScene* &s : scenes) {
-            if (s->start_frame == this->current_frame)
-                s = s->get_scene();
+        int scenes_size = scenes.size();
+        for (int i = 0; i < scenes_size; i++) {
+            if (scenes[i]->start_frame == this->current_frame)
+                scenes[i] = scenes[i]->get_scene();
 
-            s->_update_state();
+            scenes[i]->_update_state();
+
+            if (scenes[i]->start_frame + scenes[i]->duration_frames == this->current_frame) {
+                if (scenes[i]->_has_next_scene) {
+                    scenes.push_back(scenes[i]->get_next_scene());
+                }
+            }
         }
 
         background_update();
