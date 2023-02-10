@@ -29,7 +29,7 @@ Color GridCell::get_fill_col() {
     };
 }
 
-StatelessScene* GridCell::animate_alive(const float &new_alive) {
+Scene* GridCell::animate_alive(const float &new_alive) {
     return Interpolate::interpolate<float>(
         &this->alive, 
         new_alive, 
@@ -38,7 +38,7 @@ StatelessScene* GridCell::animate_alive(const float &new_alive) {
     );
 }
 
-StatelessScene* GridCell::animate_visibility(const float &new_visibility) {
+Scene* GridCell::animate_visibility(const float &new_visibility) {
     return Interpolate::interpolate<float>(
         &this->visibility, 
         new_visibility, 
@@ -51,7 +51,9 @@ void GridCell::draw() {
     if (visibility > 0)
         draw_rectangle_circle_bounded(
             this->get_stroke_rect(), 
-            this->get_occluder(), 
+            get_rectangle_occluding_circle_offset(Rectangle {
+                position.x, position.y, dimensions.x, dimensions.y
+            }, circle_offset, visibility), 
             this->get_stroke_col()
         );
     if (alive * visibility > 0)

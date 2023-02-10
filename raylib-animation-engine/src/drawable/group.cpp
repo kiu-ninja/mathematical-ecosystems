@@ -1,5 +1,6 @@
 #include "drawables.hpp"
 #include "drawing_functions.hpp"
+#include "stage/batch_scene.hpp"
 
 using namespace Drawables;
 
@@ -11,54 +12,51 @@ int Group::size() {
     return objects.size();
 }
 
-SceneGroup* Group::translate(const Vector2 &offset) {
-    SceneGroup* sg = new SceneGroup();
+BatchScene* Group::translate(const Vector2 &offset) {
+    BatchScene* sg = new BatchScene();
 
     for (Drawable* object : objects) {
-        sg->merge(object->translate(offset));
+        sg->add(object->translate(offset));
     }
 
     return sg;
 }
 
-SceneGroup* Group::scale(const float &factor) {
+BatchScene* Group::scale(const float &factor) {
     return scale(Vector2 { factor, factor });
 }
 
-SceneGroup* Group::scale(const Vector2 &factor) {
-    SceneGroup* res = space_out(factor);
+BatchScene* Group::scale(const Vector2 &factor) {
+    BatchScene* res = space_out(factor);
     for (Drawable* object : objects) {
-        res->merge(object->scale(factor));
+        res->add(object->scale(factor));
     }
     return res;
 }
 
-/// @brief Scales the distance between objects but doesn't scale the objects themselves
-/// @param factor 
-/// @return SceneGroup*
-SceneGroup* Group::space_out(const float &factor) {
+BatchScene* Group::space_out(const float &factor) {
     return space_out(Vector2 { factor, factor });
 }
 
-/// @brief Scales the distance between objects but doesn't scale the objects themselves
-/// @param factor 
-/// @return SceneGroup*
-SceneGroup* Group::space_out(const Vector2 &factor) {
-    struct DrawableGroupScaleScene: public SceneGroup {
-        using SceneGroup::SceneGroup;
+BatchScene* Group::space_out(const Vector2 &factor) {
+    class DrawableGroupScaleScene: public BatchScene, public TimedScene {
+    public:
+        using TimedScene::TimedScene;
 
         std::vector<Drawable*> objects;
         Vector2 pivot, factor;
 
-        void start() override {
+        Scene* begin() override {
             for (Drawable* object : objects) {
-                // this->merge(object->scale(factor));
-                this->merge(object->translate((object->position - pivot) * (factor - Vector2 { 1, 1 })));
+                this->add(object->translate((object->position - pivot) * (factor - Vector2 { 1, 1 }))->duration_seconds(2));
             }
-        }
 
-        void update_state(const float &t) override {
+            std::cout << "AAAAAA\n";
+            current_frame = 0;
 
+            this->add(new DebugScene("Scene is happening"));
+
+            return this;
         }
     };
 
@@ -73,6 +71,9 @@ SceneGroup* Group::space_out(const Vector2 &factor) {
     res->objects = this->objects;
     res->pivot = center;
     res->factor = factor;
+    res->duration_seconds(1);
+
+    // class TimedBatchScene: public BatchScene, public TimedScene {};
 
     return res;
 }

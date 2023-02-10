@@ -1,4 +1,4 @@
-#include "conways.hpp"
+#include "conways/conways.hpp"
 
 int main(int argc, char *argv[]) {
     Conways a;

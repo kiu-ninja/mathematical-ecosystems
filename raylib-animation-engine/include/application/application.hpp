@@ -51,7 +51,7 @@ public:
         ToggleFullscreen();
     }
 
-    virtual void setup() { std::cout << "setup() NOT IMPLEMENTED\n"; };
-    virtual void update() { std::cout << "update() NOT IMPLEMENTED\n"; };
-    virtual void draw() { std::cout << "draw() NOT IMPLEMENTED\n"; };
+    virtual void setup() = 0;
+    virtual void update() = 0;
+    virtual void draw() = 0;
 };

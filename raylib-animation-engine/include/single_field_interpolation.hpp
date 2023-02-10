@@ -1,4 +1,4 @@
-#include "stage.hpp"
+#include "stage/scene_with_duration.hpp"
 #include "easing.hpp"
 
 namespace Interpolate {
@@ -6,14 +6,14 @@ namespace Interpolate {
     enum Behavior { RELATIVE_DELTA, RELATIVE_FACTOR, STATIC };
 
     template<typename T>
-    struct EaseScene: public StatelessScene { using StatelessScene::StatelessScene;
+    struct EaseScene: public TimedScene { using TimedScene::TimedScene;
         T* object;
         T initial, target;
         Mode mode;
         Behavior behavior;
         float current = 0;
 
-        virtual void start() {
+        Scene* begin() override {
             initial = *object;
 
             switch (behavior) {
@@ -22,6 +22,8 @@ namespace Interpolate {
                 case RELATIVE_FACTOR: target = *object * target; break;
                 default: break;
             }
+
+            return this;
         }
 
         EaseScene(T* _object, T _target, Mode _mode, Behavior _behavior) {
@@ -30,23 +32,22 @@ namespace Interpolate {
             mode = _mode;
             behavior = _behavior;
 
-            this->start_frame = 0;
-            this->duration_frames = 60;
+            this->duration_frames(60);
         }
 
-        void update_state(const float &t) {
-            float _t = 0;
+        void act() override {
+            float t = (float)current_frame / duration;
 
             switch (mode) {
-                case LINEAR:      _t = Easing::linear(0, 1, t);      break;
-                case CUBIC:       _t = Easing::cubic(0, 1, t);       break;
-                case CUBIC_CUBIC: _t = Easing::cubic_cubic(0, 1, t); break;
-                case QUARDARIC:   _t = Easing::quadratic(0, 1, t);   break;
+                case LINEAR:      t = Easing::linear(0, 1, t);      break;
+                case CUBIC:       t = Easing::cubic(0, 1, t);       break;
+                case CUBIC_CUBIC: t = Easing::cubic_cubic(0, 1, t); break;
+                case QUARDARIC:   t = Easing::quadratic(0, 1, t);   break;
                 default:         /*-------------------------------*/ break;
             }
 
-            *object = *object + (target - initial) * (_t - current);
-            current = _t;
+            *object = *object + (target - initial) * (t - current);
+            current = t;
         }
     };
 

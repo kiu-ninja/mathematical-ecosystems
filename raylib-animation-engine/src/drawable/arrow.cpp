@@ -16,11 +16,11 @@ Arrow* Arrow::to(Drawable* object) {
     return this;
 }
 
-StatelessScene* Arrow::appear() {
+Scene* Arrow::appear() {
     return Interpolate::interpolate<float>(&this->visibility, 1, Interpolate::Mode::CUBIC_CUBIC, Interpolate::Behavior::STATIC);
 }
 
-StatelessScene* Arrow::disappear() {
+Scene* Arrow::disappear() {
     return Interpolate::interpolate<float>(&this->visibility, 0, Interpolate::Mode::CUBIC_CUBIC, Interpolate::Behavior::STATIC);
 }
 

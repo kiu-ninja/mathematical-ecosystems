@@ -35,8 +35,8 @@ Vector2 String::get_pos() {
     return this->position - Vector2 { (float)width * font_size / 4, (float)height * font_size / 2 };
 }
 
-StatelessScene* String::write(const std::string &target_text) {
-    struct DrawableStringWirteScene: public StatelessScene { using StatelessScene::StatelessScene;
+Scene* String::write(const std::string &target_text) {
+    struct DrawableStringWirteScene: public TimedScene { using TimedScene::TimedScene;
         Drawable* object;
         std::string initial, target;
 
@@ -50,29 +50,31 @@ StatelessScene* String::write(const std::string &target_text) {
             return this;
         }
         
-        void start() {
+        Scene* begin() override {
             ((String *)this->object)->update_text(this->target);
             ((String *)this->object)->t = 0;
+            return this;
         }
 
-        void update_state(const float &t) {
+        void act() override {
+            float t = (float)current_frame / duration;
             ((String *)this->object)->t = Easing::cubic(0, 1, t);
         }
     };
 
-    DrawableStringWirteScene* res = new DrawableStringWirteScene(1.0f);
+    DrawableStringWirteScene* res = new DrawableStringWirteScene();
     res->set_target(target_text);
     res->set_object(this);
-    ((StatelessScene*)res)->set_duration(target_text.size() / 10.0f);
+    res->duration_seconds(target_text.size() / 10.0f);
 
     return res;
 }
 
-StatelessScene* String::appear() {
+Scene* String::appear() {
     return Interpolate::interpolate<float>(&this->alpha, 1, Interpolate::Mode::CUBIC_CUBIC, Interpolate::Behavior::STATIC);
 }
 
-StatelessScene* String::disappear() {
+Scene* String::disappear() {
     return Interpolate::interpolate<float>(&this->alpha, 0, Interpolate::Mode::CUBIC_CUBIC, Interpolate::Behavior::STATIC);
 }
 

@@ -13,16 +13,12 @@ Rectangle Rect::get_rect_padded(float padding) {
     }), padding);
 }
 
-Circle Rect::get_occluder() {
-    return get_rectangle_occluding_circle_offset(Rectangle {
-        position.x, position.y, dimensions.x, dimensions.y
-    }, circle_offset, visibility);
-}
-
 void Rect::draw() {
     draw_rectangle_circle_bounded(
         this->get_rect(),
-        this->get_occluder(), 
+        get_rectangle_occluding_circle_offset(Rectangle {
+            position.x, position.y, dimensions.x, dimensions.y
+        }, circle_offset, visibility), 
         WHITE
     );
 }

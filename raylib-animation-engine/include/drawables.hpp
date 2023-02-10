@@ -4,7 +4,7 @@
 #include "random.hpp"
 #include "easing.hpp"
 #include "vectors.hpp"
-#include "stage.hpp"
+#include "stage/.hpp"
 #include "circle.hpp"
 #include "single_field_interpolation.hpp"
 
@@ -21,13 +21,20 @@ namespace Drawables {
         Drawable(Vector2 _position) : position(_position) {}
         Drawable(Vector2 _position, Vector2 _dimensions) : position(_position), dimensions(_dimensions) {};
 
-        virtual void draw() {};
+        /* Animates the drawable moving to a given destination. */
+        TimedScene* move_to(const Vector2 &destination);
+        /* Animates the drawable translating with a given offset. */
+        virtual TimedScene* translate(const Vector2 &offset);
+        /* Animates the drawable scaling with a given vector.
 
-        StatelessScene* move_to(const Vector2 &destination);
-        virtual StatelessScene* translate(const Vector2 &offset);
-        virtual StatelessScene* scale(const Vector2 &factor);
-        virtual StatelessScene* scale(const float &factor);
+        The drawable will get scaled by factor.x in the x dimension and factor.y in the y dimension. */
+        virtual TimedScene* scale(const Vector2 &factor);
+        /* Animates the drawable scaling with a given factor. */
+        virtual TimedScene* scale(const float &factor);
+        /* Returns the closest point to to the drawable from the given position. */
         virtual Vector2 closest_point(Vector2 point);
+        /* Draws the drawable to the window. */
+        virtual void draw() {};
     };
 
     // 
@@ -37,30 +44,35 @@ namespace Drawables {
 
         Group() {}
 
+        /* Adds a drawable to the group. */
         void add(Drawable* object);
+        /* Returns the size of the group. */
         int size();
-        template<typename T>
-        T* get(const int &i) {
+        /* Gets the i-th object in the group.
+        
+        If the size of the group is smaller than the index requested, it will get filled with new Drawables. */
+        template<typename T> T* get(const int &i) {
             while (objects.size() < i + 1) {
                 objects.push_back(new T());
             }
 
             return (T*)objects[i];
         };
+        /* Animates the group translating with a given offset. */
+        BatchScene* translate(const Vector2 &offset) override;
+        /* Animates the drawable scaling with a given factor. */
+        BatchScene* scale(const float &factor) override;
+        /* Animates the group scaling with a given vector.
 
-        SceneGroup* translate(const Vector2 &offset) override;
-        SceneGroup* scale(const float &factor) override;
-        SceneGroup* scale(const Vector2 &factor) override;
-        /// @brief Scales the distance between objects but doesn't scale the objects themselves
-        /// @param factor 
-        /// @return SceneGroup*
-        SceneGroup* space_out(const float &factor);
+        The group will get scaled by factor.x in the x dimension and factor.y in the y dimension. */
+        BatchScene* scale(const Vector2 &factor) override;
+        /* Animates the distance between group objects scaling with a given factor. */
+        BatchScene* space_out(const float &factor);
+        /* Animates the distance between group objects scaling with a given vector.
 
-        /// @brief Scales the distance between objects but doesn't scale the objects themselves
-        /// @param factor 
-        /// @return SceneGroup*
-        SceneGroup* space_out(const Vector2 &factor);
-
+        The distance btween group objects will get scaled by factor.x in the x dimension and factor.y in the y dimension. */
+        BatchScene* space_out(const Vector2 &factor);
+        /* Draws the drawable to the window. */
         void draw() override;
     };
 
@@ -75,9 +87,11 @@ namespace Drawables {
             circle_offset = Vector2 { randf(), randf() };
         }
 
+        /* Returns the rectangle to be drawn. */
         Rectangle get_rect();
+        /* Returns the padded rectangle to be drawn. */
         Rectangle get_rect_padded(float padding);
-        Circle get_occluder();
+        /* Draws the `Rect` to the window. */
         virtual void draw() override;
     };
     
@@ -89,13 +103,14 @@ namespace Drawables {
         float alive = 0;
 
         using Rect::Rect;
+        
 
         Rectangle get_stroke_rect();
         Rectangle get_fill_rect();
         Color get_stroke_col();
         Color get_fill_col();
-        StatelessScene* animate_alive(const float &new_alive);
-        StatelessScene* animate_visibility(const float &new_visibility);
+        Scene* animate_alive(const float &new_alive);
+        Scene* animate_visibility(const float &new_visibility);
         void draw() override;
     };
 
@@ -121,9 +136,9 @@ namespace Drawables {
         void update_text(std::string new_text);
         Rectangle get_background_rect();
         Vector2 get_pos();
-        StatelessScene* write(const std::string &target_text);
-        StatelessScene* appear();
-        StatelessScene* disappear();
+        Scene* write(const std::string &target_text);
+        Scene* appear();
+        Scene* disappear();
         void draw() override;
     };
 
@@ -144,8 +159,8 @@ namespace Drawables {
 
         Arrow* from(Drawable* object);
         Arrow* to(Drawable* object);
-        StatelessScene* appear();
-        StatelessScene* disappear();
+        Scene* appear();
+        Scene* disappear();
         void draw() override;
     };
 }; 
