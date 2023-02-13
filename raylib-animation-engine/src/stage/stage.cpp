@@ -8,25 +8,30 @@
 // #include "stage/scene_builder.hpp"
 
 void Stage::scene_update() {
-    scene_composition->update();
-    if (scene_composition->should_act()) {
-        if (!scene_composition->has_begun()) {
+    SceneController* sc_sc = scene_composition->get_scene_controller();
+    sc_sc->update();
+    if (sc_sc->should_finish()) {
+        scene_composition->finish();
+
+        /* NOTE: If you want to close the window after the animations finish, do this:
+        CloseWindow();
+        exit(0);
+        */
+    }
+    if (sc_sc->should_act()) {
+        if (!sc_sc->has_begun()) {
             scene_composition->begin();
         }
         scene_composition->act();
-    }
-    if (scene_composition->should_finish()) {
-        scene_composition->finish();
-
-        // CloseWindow();
-        // exit(0);
     }
 
     background_update();
 }
 
 Scene* Stage::add_scene_after_last(Scene* scene) {
-    return scene_composition->add_after_last(scene);
+    // FIXME: what the hell is going on here
+    // return scene_composition->add_after_last(scene);
+    return nullptr;
 }
 
 Scene* Stage::add_scene(Scene* scene) {

@@ -3,19 +3,17 @@
 #include <vector>
 #include "stage/scene.hpp"
 
-class BatchScene: virtual public Scene {
+class SceneBatch: public Scene {
 private:
     std::vector<Scene*> scenes;
-    int number_of_scenes;
 
 public:
-    BatchScene() {
-        current_frame = 0;
-        number_of_scenes = 0;
-    }
+    void set_scene_controller(SceneController* new_scene_controller) override;
 
+    virtual Scene*  begin() override;
     virtual void  act() override;
+    virtual Scene*  finish() override;
 
     /* Inserts the scene at a given arbitrary time. Returns the scene passed in. */
-    Scene*  add(Scene* scene);
+    void  add(Scene* scene);
 };

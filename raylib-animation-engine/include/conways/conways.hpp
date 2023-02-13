@@ -1,60 +1,70 @@
 #include <iostream>
 #include <cmath>
 #include <string>
-#include "stage.hpp"
+#include "stage/debug_scene.hpp"
+#include "stage/scene_builder.hpp"
+#include "stage/stage.hpp"
+#include "stage/scene_controller/waiting.hpp"
 #include "easing.hpp"
 #include "drawables.hpp"
+#include "application/application_with_state.hpp"
 
 #include "conways/state.hpp"
 
 using namespace Drawables;
 
 
-// struct ConwaysSimulation: public Scene { using Scene::Scene;
-//     int frame_count = 0;
+struct ConwaysSimulation: public Scene { using Scene::Scene;
+    int frame_count = 0;
+    ConwaysState* cs;
 
-//     void update_state(const float &t) {
-//         ApplicationWithState<ConwaysState>* a = (ApplicationWithState<ConwaysState>*)this->app;
+    ConwaysSimulation(ConwaysState* new_cs) {
+        cs = new_cs;
+    }
 
-//         if (a->state.simulation_speed > 0 && frame_count > a->state.simulation_speed) {
-//             int neighbor_counts[LG_SIZE + 2][LG_SIZE + 2];
-//             for (int i = 0; i < LG_SIZE + 2; i++) {
-//                 for (int j = 0; j < LG_SIZE + 2; j++) {
-//                     neighbor_counts[i][j] = 0;
-//                 }
-//             }
+    Scene* begin() override { return this; }
+    Scene* finish() override { return this; }
 
-//             for (int i = 0; i < LG_SIZE; i++) {
-//                 for (int j = 0; j < LG_SIZE; j++) {
-//                     if (a->state.life_grid(i-LG_HALF, j-LG_HALF)->alive > 0.5f) {
-//                         for (int p = 0; p < 3; p++) {
-//                             for (int q = 0; q < 3; q++) {
-//                                 neighbor_counts[i + p][j + q]++;
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
+    void act() override {
+        if (cs->simulation_speed > 0 && frame_count > cs->simulation_speed) {
+            int neighbor_counts[LG_SIZE + 2][LG_SIZE + 2];
+            for (int i = 0; i < LG_SIZE + 2; i++) {
+                for (int j = 0; j < LG_SIZE + 2; j++) {
+                    neighbor_counts[i][j] = 0;
+                }
+            }
 
-//             for (int i = 0; i < LG_SIZE; i++) {
-//                 for (int j = 0; j < LG_SIZE; j++) {
-//                     if (a->state.life_grid(i-LG_HALF, j-LG_HALF)->alive > 0.5f) {
-//                         if (neighbor_counts[i + 1][j + 1] - 1 != 2 && neighbor_counts[i + 1][j + 1] - 1 != 3) {
-//                             a->state.life_grid(i-LG_HALF, j-LG_HALF)->alive = 0;
-//                         }
-//                     } else {
-//                         if (neighbor_counts[i + 1][j + 1] == 3) {
-//                             a->state.life_grid(i-LG_HALF, j-LG_HALF)->alive = 1;
-//                         }
-//                     }
-//                 }
-//             }
-//             frame_count = 0;
-//         }
+            for (int i = 0; i < LG_SIZE; i++) {
+                for (int j = 0; j < LG_SIZE; j++) {
+                    if (cs->life_grid(i-LG_HALF, j-LG_HALF)->alive > 0.5f) {
+                        for (int p = 0; p < 3; p++) {
+                            for (int q = 0; q < 3; q++) {
+                                neighbor_counts[i + p][j + q]++;
+                            }
+                        }
+                    }
+                }
+            }
 
-//         frame_count++;
-//     }
-// };
+            for (int i = 0; i < LG_SIZE; i++) {
+                for (int j = 0; j < LG_SIZE; j++) {
+                    if (cs->life_grid(i-LG_HALF, j-LG_HALF)->alive > 0.5f) {
+                        if (neighbor_counts[i + 1][j + 1] - 1 != 2 && neighbor_counts[i + 1][j + 1] - 1 != 3) {
+                            cs->life_grid(i-LG_HALF, j-LG_HALF)->alive = 0;
+                        }
+                    } else {
+                        if (neighbor_counts[i + 1][j + 1] == 3) {
+                            cs->life_grid(i-LG_HALF, j-LG_HALF)->alive = 1;
+                        }
+                    }
+                }
+            }
+            frame_count = 0;
+        }
+
+        frame_count++;
+    }
+};
 
 class Conways: public Stage, public ApplicationWithState<ConwaysState> {
 public:
@@ -62,25 +72,30 @@ public:
         srand(10);
     };
 
-    Font font;
-    int font_size = 10;
+    // Font font;
+    // int font_size = 10;
     void setup() override {
-        font = LoadFontEx("demo-font.otf", font_size * 20, NULL, 0);
-        state.subtitle_text.font = font;
-        state.subtitle_text.font_size = font_size;
+        // font = LoadFontEx("demo-font.otf", font_size * 20, NULL, 0);
+        // state.subtitle_text.font = font;
+        // state.subtitle_text.font_size = font_size;
 
         // ==== 
 
-        // SceneComposition* s1 = new SceneComposition();
-        // for (Drawable* d : this->state.cells.objects) {
-        //     s1->add(((GridCell*)d)->animate_visibility(1));
-        //     s1->add(((GridCell*)d)->scale(3.5));
-        // }
-        // add_scene(s1);
+        SceneComposition* s1 = new SceneComposition();
+        for (Drawable* d : this->state.cells.objects) {
+            s1->add(((GridCell*)d)->animate_visibility(1))->set_scene_controller(new TimedSceneController(0, 100));
+            s1->add(d->scale(0.9))->set_scene_controller(new TimedSceneController(0, 100));
+        }
+        add_scene(s1);
 
-        // add_scene_after_last(state.cells.space_out(4));
-
-        add_scene(state.cells.space_out(4));
+        add_scene(new SceneBuilder(
+            [=]() {
+                SceneBuilder* s = state.cells.scale(4);
+                s->set_built_scene_controller(new TimedSceneController(0, 100)); 
+                return s;
+            },
+            new InfiniteSceneController()
+        ))->set_scene_controller(new WaitingSceneController(s1->get_scene_controller()));
 
         // add_scene_builder([&] (SceneGroup* sg) {
         //     /* Show all grid cells */
@@ -120,7 +135,9 @@ public:
         // }))->set_duration(1)->wait(0.5);
 
         // // Background scenes
-        // add_scene((new ConwaysSimulation()))->set_duration(100000);
+        Scene* conways_simulation = new ConwaysSimulation(&state);
+        conways_simulation->set_scene_controller(new InfiniteSceneController());
+        add_scene(conways_simulation);
     }
 
     void background_update() override { };
@@ -135,6 +152,5 @@ public:
         state.cells.draw();
         state.subtitle_text.draw();
         state.arrows.draw();
-        // state.hint_text.draw();
     }
 }; 

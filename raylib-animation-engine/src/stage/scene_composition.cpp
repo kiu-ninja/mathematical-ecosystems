@@ -1,40 +1,49 @@
 #include <vector>
+#include "stage/scene_controller/composition.hpp"
 #include "stage/scene_composition.hpp"
 
-void SceneComposition::act() {
-    for (Scene* s : scenes) {
-        s->update();
-    }
+SceneComposition::SceneComposition() {
+    set_scene_controller(new SceneCompositionController(scenes));
+}
 
+Scene* SceneComposition::begin() {
+    set_scene_controller(new SceneCompositionController(scenes));
+    return this;
+}
+
+
+Scene* SceneComposition::finish() {
+    return this;
+}
+
+
+void SceneComposition::act() {
     for (int i = 0; i < scenes.size(); i++) {
-        if (scenes[i]->should_act()) {
-            if (!scenes[i]->has_begun()) {
-                scenes[i] = scenes[i]->begin();
+        if (scenes[i]->get_scene_controller()->should_finish()) {
+            Scene* scene = scenes[i]->finish();
+            if (scene != scenes[i]) {
+                scenes[i] = scene;
+            } else {
+                scenes.erase(scenes.begin() + i);
+                i--;
             }
+            continue;
+        }
+        Scene* pscene;
+        while (scenes[i]->get_scene_controller()->should_act() && !scenes[i]->get_scene_controller()->has_begun() && pscene != scenes[i]) {
+            pscene = scenes[i];
+            scenes[i] = scenes[i]->begin();
+        }
+        if (scenes[i]->get_scene_controller()->should_act()) {
             scenes[i]->act();
         }
-        if (scenes[i]->should_finish()) {
-            for (Scene* scene : scenes[i]->finish()) {
-                add(scene);
-            }
-            scenes.erase(scenes.begin() + i);
-            i--;
-        }
     }
-    current_frame++;
-}
-
-bool SceneComposition::should_finish() {
-    bool res = true;
-
+                                                    
     for (Scene* s : scenes) {
-        res &= s->should_finish();
+        s->get_scene_controller()->update();
     }
-
-    return res;
 }
 
-// 
 
 Scene* SceneComposition::add(Scene* scene) {
     scenes.push_back(scene);
@@ -42,12 +51,11 @@ Scene* SceneComposition::add(Scene* scene) {
 
     return scene;
 }
-Scene* SceneComposition::add_with_last(Scene* scene) {
-    return add(scene->play_with(last_scene()));
-}
-Scene* SceneComposition::add_after_last(Scene* scene) {
-    return add(scene->play_after(last_scene()));
-}
+
+
 Scene* SceneComposition::last_scene() {
+    if (number_of_scenes <= 0)
+        return nullptr;
+
     return scenes[number_of_scenes - 1];
 }

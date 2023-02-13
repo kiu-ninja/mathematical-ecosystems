@@ -36,7 +36,7 @@ Vector2 String::get_pos() {
 }
 
 Scene* String::write(const std::string &target_text) {
-    struct DrawableStringWirteScene: public TimedScene { using TimedScene::TimedScene;
+    struct DrawableStringWirteScene: public Scene { using Scene::Scene;
         Drawable* object;
         std::string initial, target;
 
@@ -57,15 +57,19 @@ Scene* String::write(const std::string &target_text) {
         }
 
         void act() override {
-            float t = (float)current_frame / duration;
+            float t = get_scene_controller()->get_t();
             ((String *)this->object)->t = Easing::cubic(0, 1, t);
+        }
+
+        Scene* finish() override {
+            return {};
         }
     };
 
     DrawableStringWirteScene* res = new DrawableStringWirteScene();
     res->set_target(target_text);
     res->set_object(this);
-    res->duration_seconds(target_text.size() / 10.0f);
+    res->set_scene_controller(new TimedSceneController(0.0f, target_text.size() / 10.0f));
 
     return res;
 }

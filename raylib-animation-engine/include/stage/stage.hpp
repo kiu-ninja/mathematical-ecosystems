@@ -3,6 +3,7 @@
 #include <vector>
 #include "stage/scene.hpp"
 #include "stage/scene_composition.hpp"
+#include "stage/scene_controller/infinite.hpp"
 
 // ================
 
@@ -13,13 +14,10 @@ public:
 public:
     Stage() {
         scene_composition = new SceneComposition();
+        scene_composition->set_scene_controller(new InfiniteSceneController());
     }
     Scene* add_scene_after_last(Scene* scene);
-    // SceneGroup* merge_scene_with_last(Scene* scene);
-    // SceneGroup* add_scene_to_last(Scene* scene);
-    // SceneBuilder* add_scene_builder(std::function<void(SceneGroup*)> f);
     Scene* add_scene(Scene* scene);
-    // SceneGroup* new_scene_group();
     Scene* last_scene();
 
     void scene_update();

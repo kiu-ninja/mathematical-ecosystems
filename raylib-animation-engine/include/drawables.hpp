@@ -4,9 +4,9 @@
 #include "random.hpp"
 #include "easing.hpp"
 #include "vectors.hpp"
-#include "stage/.hpp"
 #include "circle.hpp"
 #include "single_field_interpolation.hpp"
+#include "stage/scene_builder.hpp"
 
 namespace Drawables {
     Rectangle padded_rectangle(const Rectangle &rect, const float &padding);
@@ -22,15 +22,15 @@ namespace Drawables {
         Drawable(Vector2 _position, Vector2 _dimensions) : position(_position), dimensions(_dimensions) {};
 
         /* Animates the drawable moving to a given destination. */
-        TimedScene* move_to(const Vector2 &destination);
+        Scene* move_to(const Vector2 &destination);
         /* Animates the drawable translating with a given offset. */
-        virtual TimedScene* translate(const Vector2 &offset);
+        virtual Scene* translate(const Vector2 &offset);
         /* Animates the drawable scaling with a given vector.
 
         The drawable will get scaled by factor.x in the x dimension and factor.y in the y dimension. */
-        virtual TimedScene* scale(const Vector2 &factor);
+        virtual Scene* scale(const Vector2 &factor);
         /* Animates the drawable scaling with a given factor. */
-        virtual TimedScene* scale(const float &factor);
+        virtual Scene* scale(const float &factor);
         /* Returns the closest point to to the drawable from the given position. */
         virtual Vector2 closest_point(Vector2 point);
         /* Draws the drawable to the window. */
@@ -59,19 +59,19 @@ namespace Drawables {
             return (T*)objects[i];
         };
         /* Animates the group translating with a given offset. */
-        BatchScene* translate(const Vector2 &offset) override;
+        SceneBuilder* translate(const Vector2 &offset) override;
         /* Animates the drawable scaling with a given factor. */
-        BatchScene* scale(const float &factor) override;
+        SceneBuilder* scale(const float &factor) override;
         /* Animates the group scaling with a given vector.
 
         The group will get scaled by factor.x in the x dimension and factor.y in the y dimension. */
-        BatchScene* scale(const Vector2 &factor) override;
+        SceneBuilder* scale(const Vector2 &factor) override;
         /* Animates the distance between group objects scaling with a given factor. */
-        BatchScene* space_out(const float &factor);
+        SceneBuilder* space_out(const float &factor);
         /* Animates the distance between group objects scaling with a given vector.
 
         The distance btween group objects will get scaled by factor.x in the x dimension and factor.y in the y dimension. */
-        BatchScene* space_out(const Vector2 &factor);
+        SceneBuilder* space_out(const Vector2 &factor);
         /* Draws the drawable to the window. */
         void draw() override;
     };

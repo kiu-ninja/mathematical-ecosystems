@@ -1,4 +1,5 @@
-#include "stage/scene_with_duration.hpp"
+#include "stage/scene.hpp"
+#include "stage/scene_controller/timed.hpp"
 #include "easing.hpp"
 
 namespace Interpolate {
@@ -6,7 +7,7 @@ namespace Interpolate {
     enum Behavior { RELATIVE_DELTA, RELATIVE_FACTOR, STATIC };
 
     template<typename T>
-    struct EaseScene: public TimedScene { using TimedScene::TimedScene;
+    struct EaseScene: public Scene { using Scene::Scene;
         T* object;
         T initial, target;
         Mode mode;
@@ -31,12 +32,10 @@ namespace Interpolate {
             target = _target;
             mode = _mode;
             behavior = _behavior;
-
-            this->duration_frames(60);
         }
 
         void act() override {
-            float t = (float)current_frame / duration;
+            float t = get_scene_controller()->get_t();
 
             switch (mode) {
                 case LINEAR:      t = Easing::linear(0, 1, t);      break;
@@ -49,10 +48,16 @@ namespace Interpolate {
             *object = *object + (target - initial) * (t - current);
             current = t;
         }
+
+        Scene* finish() override {
+            return this;
+        }
     };
 
     template<typename T>
     EaseScene<T>* interpolate(T* object, T target, Mode mode, Behavior Behavior) {
-        return new EaseScene<T>(object, target, mode, Behavior);
+        EaseScene<T>* res = new EaseScene<T>(object, target, mode, Behavior);
+        res->set_scene_controller(new TimedSceneController(0.0f, 1.0f));
+        return res;
     }
 }

@@ -9,10 +9,6 @@ struct ApplicationData {
 
 class Application {
 public:
-    ApplicationData app_data;
-    int current_frame;
-    
-protected:
     Application(int window_width, int window_height, const char* name) {
         app_data.width = window_width;
         app_data.height = window_height;
@@ -24,7 +20,9 @@ protected:
         // SetTargetFPS(300);
     };
 
-public:
+    ApplicationData app_data;
+    int current_frame;
+
     void start() {
         current_frame = 0;
         setup();

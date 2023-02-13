@@ -3,7 +3,7 @@
 
 using namespace Drawables;
 
-TimedScene* Drawable::move_to(const Vector2 &destination) {
+Scene* Drawable::move_to(const Vector2 &destination) {
     return Interpolate::interpolate<Vector2>(
         &this->position, 
         destination,
@@ -12,7 +12,7 @@ TimedScene* Drawable::move_to(const Vector2 &destination) {
     );
 }
 
-TimedScene* Drawable::translate(const Vector2 &offset) {
+Scene* Drawable::translate(const Vector2 &offset) {
     return Interpolate::interpolate<Vector2>(
         &this->position, 
         offset, 
@@ -21,7 +21,7 @@ TimedScene* Drawable::translate(const Vector2 &offset) {
     );
 }
 
-TimedScene* Drawable::scale(const Vector2 &factor) {
+Scene* Drawable::scale(const Vector2 &factor) {
     return Interpolate::interpolate<Vector2>(
         &this->dimensions, 
         factor, 
@@ -30,7 +30,7 @@ TimedScene* Drawable::scale(const Vector2 &factor) {
     );
 }
 
-TimedScene* Drawable::scale(const float &factor) {
+Scene* Drawable::scale(const float &factor) {
     return scale(Vector2 { factor, factor });
 }
 

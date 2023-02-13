@@ -1,6 +1,8 @@
 #include "drawables.hpp"
 #include "drawing_functions.hpp"
-#include "stage/batch_scene.hpp"
+#include "stage/scene_builder.hpp"
+#include "stage/scene_batch.hpp"
+#include "stage/scene_controller/timed.hpp"
 
 using namespace Drawables;
 
@@ -12,70 +14,61 @@ int Group::size() {
     return objects.size();
 }
 
-BatchScene* Group::translate(const Vector2 &offset) {
-    BatchScene* sg = new BatchScene();
+SceneBuilder* Group::translate(const Vector2 &offset) {
+    return new SceneBuilder([=] () {
+        SceneBatch* sb = new SceneBatch();
+        
+        for (Drawable* object : objects) {
+            sb->add(object->translate(offset));
+        }
 
-    for (Drawable* object : objects) {
-        sg->add(object->translate(offset));
-    }
-
-    return sg;
+        return sb;
+    }, new InfiniteSceneController());
 }
 
-BatchScene* Group::scale(const float &factor) {
+SceneBuilder* Group::scale(const float &factor) {
     return scale(Vector2 { factor, factor });
 }
 
-BatchScene* Group::scale(const Vector2 &factor) {
-    BatchScene* res = space_out(factor);
-    for (Drawable* object : objects) {
-        res->add(object->scale(factor));
-    }
-    return res;
-}
-
-BatchScene* Group::space_out(const float &factor) {
-    return space_out(Vector2 { factor, factor });
-}
-
-BatchScene* Group::space_out(const Vector2 &factor) {
-    class DrawableGroupScaleScene: public BatchScene, public TimedScene {
-    public:
-        using TimedScene::TimedScene;
-
-        std::vector<Drawable*> objects;
-        Vector2 pivot, factor;
-
-        Scene* begin() override {
-            for (Drawable* object : objects) {
-                this->add(object->translate((object->position - pivot) * (factor - Vector2 { 1, 1 }))->duration_seconds(2));
-            }
-
-            std::cout << "AAAAAA\n";
-            current_frame = 0;
-
-            this->add(new DebugScene("Scene is happening"));
-
-            return this;
-        }
-    };
-
+SceneBuilder* Group::scale(const Vector2 &factor) {
     Vector2 center = Vector2 { 0, 0 };
     for (Drawable* object : objects) {
         center += object->position;
     }
     center = center / objects.size();
 
-    DrawableGroupScaleScene* res = new DrawableGroupScaleScene();
+    return new SceneBuilder([=] () {
+        SceneBatch* sb = new SceneBatch();
+        
+        for (Drawable* object : objects) {
+            sb->add(object->translate((object->position - center) * (factor - Vector2 { 1, 1 })));
+            sb->add(object->scale(factor));
+        }
 
-    res->objects = this->objects;
-    res->pivot = center;
-    res->factor = factor;
-    res->duration_seconds(1);
+        return sb;
+    }, new InfiniteSceneController());
+}
 
-    // class TimedBatchScene: public BatchScene, public TimedScene {};
+SceneBuilder* Group::space_out(const float &factor) {
+    return space_out(Vector2 { factor, factor });
+}
 
-    return res;
+SceneBuilder* Group::space_out(const Vector2 &factor) {
+    Vector2 center = Vector2 { 0, 0 };
+    for (Drawable* object : objects) {
+        center += object->position;
+    }
+    center = center / objects.size();
+
+    return new SceneBuilder([=] () {
+        SceneBatch* sb = new SceneBatch();
+        
+        for (Drawable* object : objects) {
+            sb->add(object->translate((object->position - center) * (factor - Vector2 { 1, 1 })));
+        }
+
+        return sb;
+    }, new InfiniteSceneController());
 }
 
 void Group::draw() {
