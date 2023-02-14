@@ -1,22 +1,26 @@
-#include "stage/scene_controller/composition.hpp"
+#include "stage/scene/controller/composition.hpp"
 
-SceneCompositionController::SceneCompositionController(std::vector<Scene*> &sc) : handle(sc) {
-    // handle = sc;
-}
-void SceneCompositionController::update() {
-    current_frame = 0;
-}
-bool SceneCompositionController::should_act() {
-    return true;
-}
-bool SceneCompositionController::should_finish() {
-    for (Scene* scene : handle) {
-        if (!scene->get_scene_controller()->should_finish()) {
-            return false;
+namespace Scene {
+    namespace Controllers {
+        Composition::Composition(std::vector<Scene*> &sc) : handle(sc) {
+            // handle = sc;
+        }
+        void Composition::update() {
+            current_frame = 0;
+        }
+        bool Composition::should_act() {
+            return true;
+        }
+        bool Composition::should_finish() {
+            for (Scene* scene : handle) {
+                if (!scene->get_scene_controller()->should_finish()) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        float Composition::get_t() {
+            return 1.0f;
         }
     }
-    return true;
-}
-float SceneCompositionController::get_t() {
-    return 1.0f;
 }

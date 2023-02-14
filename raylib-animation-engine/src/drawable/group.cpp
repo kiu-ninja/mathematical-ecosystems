@@ -1,8 +1,8 @@
 #include "drawables.hpp"
 #include "drawing_functions.hpp"
-#include "stage/scene_builder.hpp"
-#include "stage/scene_batch.hpp"
-#include "stage/scene_controller/timed.hpp"
+#include "stage/scene/instant_builder.hpp"
+#include "stage/scene/batch.hpp"
+#include "stage/scene/controller/timed.hpp"
 
 using namespace Drawables;
 
@@ -14,61 +14,61 @@ int Group::size() {
     return objects.size();
 }
 
-SceneBuilder* Group::translate(const Vector2 &offset) {
-    return new SceneBuilder([=] () {
-        SceneBatch* sb = new SceneBatch();
+Scene::InstantBuilder* Group::translate(const Vector2 &offset) {
+    return new Scene::InstantBuilder([=] () {
+        Scene::Batch* sb = new Scene::Batch();
         
         for (Drawable* object : objects) {
             sb->add(object->translate(offset));
         }
 
-        return sb;
-    }, new InfiniteSceneController());
+        return (Scene::Scene*)sb;
+    });
 }
 
-SceneBuilder* Group::scale(const float &factor) {
+Scene::InstantBuilder* Group::scale(const float &factor) {
     return scale(Vector2 { factor, factor });
 }
 
-SceneBuilder* Group::scale(const Vector2 &factor) {
+Scene::InstantBuilder* Group::scale(const Vector2 &factor) {
     Vector2 center = Vector2 { 0, 0 };
     for (Drawable* object : objects) {
         center += object->position;
     }
     center = center / objects.size();
 
-    return new SceneBuilder([=] () {
-        SceneBatch* sb = new SceneBatch();
+    return new Scene::InstantBuilder([=] () {
+        Scene::Batch* sb = new Scene::Batch();
         
         for (Drawable* object : objects) {
             sb->add(object->translate((object->position - center) * (factor - Vector2 { 1, 1 })));
             sb->add(object->scale(factor));
         }
 
-        return sb;
-    }, new InfiniteSceneController());
+        return (Scene::Scene*)sb;
+    });
 }
 
-SceneBuilder* Group::space_out(const float &factor) {
+Scene::InstantBuilder* Group::space_out(const float &factor) {
     return space_out(Vector2 { factor, factor });
 }
 
-SceneBuilder* Group::space_out(const Vector2 &factor) {
+Scene::InstantBuilder* Group::space_out(const Vector2 &factor) {
     Vector2 center = Vector2 { 0, 0 };
     for (Drawable* object : objects) {
         center += object->position;
     }
     center = center / objects.size();
 
-    return new SceneBuilder([=] () {
-        SceneBatch* sb = new SceneBatch();
+    return new Scene::InstantBuilder([=] () {
+        Scene::Batch* sb = new Scene::Batch();
         
         for (Drawable* object : objects) {
             sb->add(object->translate((object->position - center) * (factor - Vector2 { 1, 1 })));
         }
 
-        return sb;
-    }, new InfiniteSceneController());
+        return (Scene::Scene*)sb;
+    });
 }
 
 void Group::draw() {

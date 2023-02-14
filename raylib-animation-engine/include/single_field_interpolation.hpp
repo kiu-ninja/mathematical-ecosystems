@@ -1,5 +1,4 @@
-#include "stage/scene.hpp"
-#include "stage/scene_controller/timed.hpp"
+#include "stage/scene/scene.hpp"
 #include "easing.hpp"
 
 namespace Interpolate {
@@ -7,7 +6,7 @@ namespace Interpolate {
     enum Behavior { RELATIVE_DELTA, RELATIVE_FACTOR, STATIC };
 
     template<typename T>
-    struct EaseScene: public Scene { using Scene::Scene;
+    struct EaseScene: public Scene::Scene { using Scene::Scene;
         T* object;
         T initial, target;
         Mode mode;
@@ -56,8 +55,6 @@ namespace Interpolate {
 
     template<typename T>
     EaseScene<T>* interpolate(T* object, T target, Mode mode, Behavior Behavior) {
-        EaseScene<T>* res = new EaseScene<T>(object, target, mode, Behavior);
-        res->set_scene_controller(new TimedSceneController(0.0f, 1.0f));
-        return res;
+        return new EaseScene<T>(object, target, mode, Behavior);
     }
 }

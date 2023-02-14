@@ -1,14 +1,18 @@
-#include "stage/scene_controller/infinite.hpp"
+#include "stage/scene/controller/infinite.hpp"
 
-void InfiniteSceneController::update() {
-    current_frame = 0;
-}
-bool InfiniteSceneController::should_act() {
-    return true;
-}
-bool InfiniteSceneController::should_finish() {
-    return false;
-}
-float InfiniteSceneController::get_t() {
-    return 1.0f;
+namespace Scene {
+    namespace Controllers {
+        void Infinite::update() {
+            current_frame = 0;
+        }
+        bool Infinite::should_act() {
+            return true;
+        }
+        bool Infinite::should_finish() {
+            return false;
+        }
+        float Infinite::get_t() {
+            return 0.016666f; // 1/60
+        }
+    }
 }

@@ -29,7 +29,7 @@ Color GridCell::get_fill_col() {
     };
 }
 
-Scene* GridCell::animate_alive(const float &new_alive) {
+Scene::Scene* GridCell::animate_alive(const float &new_alive) {
     return Interpolate::interpolate<float>(
         &this->alive, 
         new_alive, 
@@ -38,7 +38,7 @@ Scene* GridCell::animate_alive(const float &new_alive) {
     );
 }
 
-Scene* GridCell::animate_visibility(const float &new_visibility) {
+Scene::Scene* GridCell::animate_visibility(const float &new_visibility) {
     return Interpolate::interpolate<float>(
         &this->visibility, 
         new_visibility, 

@@ -6,7 +6,7 @@
 #include "vectors.hpp"
 #include "circle.hpp"
 #include "single_field_interpolation.hpp"
-#include "stage/scene_builder.hpp"
+#include "stage/scene/instant_builder.hpp"
 
 namespace Drawables {
     Rectangle padded_rectangle(const Rectangle &rect, const float &padding);
@@ -22,15 +22,15 @@ namespace Drawables {
         Drawable(Vector2 _position, Vector2 _dimensions) : position(_position), dimensions(_dimensions) {};
 
         /* Animates the drawable moving to a given destination. */
-        Scene* move_to(const Vector2 &destination);
+        Scene::Scene* move_to(const Vector2 &destination);
         /* Animates the drawable translating with a given offset. */
-        virtual Scene* translate(const Vector2 &offset);
+        virtual Scene::Scene* translate(const Vector2 &offset);
         /* Animates the drawable scaling with a given vector.
 
         The drawable will get scaled by factor.x in the x dimension and factor.y in the y dimension. */
-        virtual Scene* scale(const Vector2 &factor);
+        virtual Scene::Scene* scale(const Vector2 &factor);
         /* Animates the drawable scaling with a given factor. */
-        virtual Scene* scale(const float &factor);
+        virtual Scene::Scene* scale(const float &factor);
         /* Returns the closest point to to the drawable from the given position. */
         virtual Vector2 closest_point(Vector2 point);
         /* Draws the drawable to the window. */
@@ -59,19 +59,19 @@ namespace Drawables {
             return (T*)objects[i];
         };
         /* Animates the group translating with a given offset. */
-        SceneBuilder* translate(const Vector2 &offset) override;
+        Scene::InstantBuilder* translate(const Vector2 &offset) override;
         /* Animates the drawable scaling with a given factor. */
-        SceneBuilder* scale(const float &factor) override;
+        Scene::InstantBuilder* scale(const float &factor) override;
         /* Animates the group scaling with a given vector.
 
         The group will get scaled by factor.x in the x dimension and factor.y in the y dimension. */
-        SceneBuilder* scale(const Vector2 &factor) override;
+        Scene::InstantBuilder* scale(const Vector2 &factor) override;
         /* Animates the distance between group objects scaling with a given factor. */
-        SceneBuilder* space_out(const float &factor);
+        Scene::InstantBuilder* space_out(const float &factor);
         /* Animates the distance between group objects scaling with a given vector.
 
         The distance btween group objects will get scaled by factor.x in the x dimension and factor.y in the y dimension. */
-        SceneBuilder* space_out(const Vector2 &factor);
+        Scene::InstantBuilder* space_out(const Vector2 &factor);
         /* Draws the drawable to the window. */
         void draw() override;
     };
@@ -109,8 +109,8 @@ namespace Drawables {
         Rectangle get_fill_rect();
         Color get_stroke_col();
         Color get_fill_col();
-        Scene* animate_alive(const float &new_alive);
-        Scene* animate_visibility(const float &new_visibility);
+        Scene::Scene* animate_alive(const float &new_alive);
+        Scene::Scene* animate_visibility(const float &new_visibility);
         void draw() override;
     };
 
@@ -136,9 +136,9 @@ namespace Drawables {
         void update_text(std::string new_text);
         Rectangle get_background_rect();
         Vector2 get_pos();
-        Scene* write(const std::string &target_text);
-        Scene* appear();
-        Scene* disappear();
+        Scene::Scene* write(const std::string &target_text);
+        Scene::Scene* appear();
+        Scene::Scene* disappear();
         void draw() override;
     };
 
@@ -159,8 +159,8 @@ namespace Drawables {
 
         Arrow* from(Drawable* object);
         Arrow* to(Drawable* object);
-        Scene* appear();
-        Scene* disappear();
+        Scene::Scene* appear();
+        Scene::Scene* disappear();
         void draw() override;
     };
 }; 

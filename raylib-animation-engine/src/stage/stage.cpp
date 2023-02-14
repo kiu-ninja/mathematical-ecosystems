@@ -1,22 +1,14 @@
 #include <iostream>
 #include <vector>
-// #include "application/application->hpp"
-// #include "application/application_with_state.hpp"
-#include "stage/scene.hpp"
 #include "stage/stage.hpp"
-// #include "stage/scene_group.hpp"
-// #include "stage/scene_builder.hpp"
+#include "stage/scene/instant_builder.hpp"
+#include "stage/scene/builders.hpp"
 
 void Stage::scene_update() {
-    SceneController* sc_sc = scene_composition->get_scene_controller();
+    Scene::Controller* sc_sc = scene_composition->get_scene_controller();
     sc_sc->update();
     if (sc_sc->should_finish()) {
         scene_composition->finish();
-
-        /* NOTE: If you want to close the window after the animations finish, do this:
-        CloseWindow();
-        exit(0);
-        */
     }
     if (sc_sc->should_act()) {
         if (!sc_sc->has_begun()) {
@@ -26,18 +18,39 @@ void Stage::scene_update() {
     }
 
     background_update();
+} 
+
+void Stage::add_scene_after_last(Scene::Scene* scene) {
+    Scene::Controller* sc = get_last_scene_controller();
+    set_last_scene_controller(scene->get_scene_controller());
+
+    add_scene(Scene::Builders::waiting_for(
+        scene,
+        sc
+    ));
+} 
+
+void Stage::add_scene(Scene::Scene* scene) {
+    set_last_scene_controller(scene->get_scene_controller());
+
+    setting_last_scene_controller = true;
+
+    scene_composition->add(scene);
 }
 
-Scene* Stage::add_scene_after_last(Scene* scene) {
-    // FIXME: what the hell is going on here
-    // return scene_composition->add_after_last(scene);
-    return nullptr;
+Scene::Controller* Stage::get_last_scene_controller() {
+    if (!has_last_scene_controller) {
+        std::cout << "THE STAGE DOESN'T HAVE A LAST SCENE CONTROLLER, TERMINATING!\n";
+        exit(EXIT_FAILURE);
+    }
+    
+    return last_scene_controller;
 }
 
-Scene* Stage::add_scene(Scene* scene) {
-    return scene_composition->add(scene);
-}
-
-Scene* Stage::last_scene() {
-    return scene_composition->last_scene();
+void Stage::set_last_scene_controller(Scene::Controller* scene_controller) {
+    if (setting_last_scene_controller) {
+        last_scene_controller = scene_controller;
+        has_last_scene_controller = true;
+        setting_last_scene_controller = false;
+    }
 }

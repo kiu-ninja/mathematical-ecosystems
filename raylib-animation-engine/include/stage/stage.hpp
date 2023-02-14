@@ -1,24 +1,29 @@
 #pragma once
 #include <iostream>
 #include <vector>
-#include "stage/scene.hpp"
-#include "stage/scene_composition.hpp"
-#include "stage/scene_controller/infinite.hpp"
+#include "stage/scene/scene.hpp"
+#include "stage/scene/composition.hpp"
+#include "stage/scene/controller/infinite.hpp"
 
 // ================
 
 class Stage {
-public:
-    SceneComposition* scene_composition;
+private:
+    Scene::Composition* scene_composition;
+
+    Scene::Controller* last_scene_controller;
+    bool has_last_scene_controller = false;
+    bool setting_last_scene_controller = true;
+    void set_last_scene_controller(Scene::Controller* scene_controller);
 
 public:
     Stage() {
-        scene_composition = new SceneComposition();
-        scene_composition->set_scene_controller(new InfiniteSceneController());
+        scene_composition = new Scene::Composition();
+        scene_composition->set_scene_controller(new Scene::Controllers::Infinite());
     }
-    Scene* add_scene_after_last(Scene* scene);
-    Scene* add_scene(Scene* scene);
-    Scene* last_scene();
+    void add_scene_after_last(Scene::Scene* scene);
+    void add_scene(Scene::Scene* scene);
+    Scene::Controller* get_last_scene_controller();
 
     void scene_update();
     virtual void background_update() = 0;

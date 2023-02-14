@@ -1,5 +1,6 @@
 #include "drawables.hpp"
 #include "drawing_functions.hpp"
+#include "stage/scene/controllers.hpp"
 
 using namespace Drawables;
 
@@ -35,8 +36,8 @@ Vector2 String::get_pos() {
     return this->position - Vector2 { (float)width * font_size / 4, (float)height * font_size / 2 };
 }
 
-Scene* String::write(const std::string &target_text) {
-    struct DrawableStringWirteScene: public Scene { using Scene::Scene;
+Scene::Scene* String::write(const std::string &target_text) {
+    struct DrawableStringWirteScene: public Scene::Scene { using Scene::Scene;
         Drawable* object;
         std::string initial, target;
 
@@ -69,16 +70,15 @@ Scene* String::write(const std::string &target_text) {
     DrawableStringWirteScene* res = new DrawableStringWirteScene();
     res->set_target(target_text);
     res->set_object(this);
-    res->set_scene_controller(new TimedSceneController(0.0f, target_text.size() / 10.0f));
 
-    return res;
+    return Scene::Controllers::timed(res, 0.0f, target_text.size() / 10.0f);
 }
 
-Scene* String::appear() {
+Scene::Scene* String::appear() {
     return Interpolate::interpolate<float>(&this->alpha, 1, Interpolate::Mode::CUBIC_CUBIC, Interpolate::Behavior::STATIC);
 }
 
-Scene* String::disappear() {
+Scene::Scene* String::disappear() {
     return Interpolate::interpolate<float>(&this->alpha, 0, Interpolate::Mode::CUBIC_CUBIC, Interpolate::Behavior::STATIC);
 }
 
