@@ -1,5 +1,5 @@
 #include <vector>
-#include "stage/scene/batch.hpp"
+#include "stage/scene.hpp"
 
 namespace Scene {
     void Batch::set_scene_controller(Controller* new_scene_controller) {

@@ -1,8 +1,8 @@
 #include "drawables.hpp"
 #include "drawing_functions.hpp"
-#include "stage/scene/instant_builder.hpp"
-#include "stage/scene/batch.hpp"
-#include "stage/scene/controller/timed.hpp"
+#include "stage/scene.hpp"
+#include "stage/scene.hpp"
+#include "stage/scene.hpp"
 
 using namespace Drawables;
 
@@ -14,8 +14,8 @@ int Group::size() {
     return objects.size();
 }
 
-Scene::InstantBuilder* Group::translate(const Vector2 &offset) {
-    return new Scene::InstantBuilder([=] () {
+Scene::Builders::Instant* Group::translate(const Vector2 &offset) {
+    return new Scene::Builders::Instant([=] () {
         Scene::Batch* sb = new Scene::Batch();
         
         for (Drawable* object : objects) {
@@ -26,22 +26,16 @@ Scene::InstantBuilder* Group::translate(const Vector2 &offset) {
     });
 }
 
-Scene::InstantBuilder* Group::scale(const float &factor) {
-    return scale(Vector2 { factor, factor });
+Scene::Builders::Instant* Group::scale(const float &factor, const Vector2 &pivot) {
+    return scale(Vector2 { factor, factor }, pivot);
 }
 
-Scene::InstantBuilder* Group::scale(const Vector2 &factor) {
-    Vector2 center = Vector2 { 0, 0 };
-    for (Drawable* object : objects) {
-        center += object->position;
-    }
-    center = center / objects.size();
-
-    return new Scene::InstantBuilder([=] () {
+Scene::Builders::Instant* Group::scale(const Vector2 &factor, const Vector2 &pivot) {
+    return new Scene::Builders::Instant([=] () {
         Scene::Batch* sb = new Scene::Batch();
         
         for (Drawable* object : objects) {
-            sb->add(object->translate((object->position - center) * (factor - Vector2 { 1, 1 })));
+            sb->add(object->translate((object->position - pivot) * (factor - Vector2 { 1, 1 })));
             sb->add(object->scale(factor));
         }
 
@@ -49,18 +43,38 @@ Scene::InstantBuilder* Group::scale(const Vector2 &factor) {
     });
 }
 
-Scene::InstantBuilder* Group::space_out(const float &factor) {
+Scene::Builders::Instant* Group::scale(const float &factor) {
+    return scale(Vector2 { factor, factor });
+}
+
+Scene::Builders::Instant* Group::scale(const Vector2 &factor) {
+    Vector2 min = objects[0]->position, max = objects[0]->position;
+    for (Drawable* object : objects) {
+        min.x = std::min(object->position.x, min.x);
+        min.y = std::min(object->position.y, min.y);
+        max.x = std::max(object->position.x, max.x);
+        max.y = std::max(object->position.y, max.y);
+    }
+    Vector2 center = (min + max) / 2;
+
+    return scale(factor, center);
+}
+
+Scene::Builders::Instant* Group::space_out(const float &factor) {
     return space_out(Vector2 { factor, factor });
 }
 
-Scene::InstantBuilder* Group::space_out(const Vector2 &factor) {
-    Vector2 center = Vector2 { 0, 0 };
+Scene::Builders::Instant* Group::space_out(const Vector2 &factor) {
+    Vector2 min = objects[0]->position, max = objects[0]->position;
     for (Drawable* object : objects) {
-        center += object->position;
+        min.x = std::min(object->position.x, min.x);
+        min.y = std::min(object->position.y, min.y);
+        max.x = std::max(object->position.x, max.x);
+        max.y = std::max(object->position.y, max.y);
     }
-    center = center / objects.size();
+    Vector2 center = (min + max) / 2;
 
-    return new Scene::InstantBuilder([=] () {
+    return new Scene::Builders::Instant([=] () {
         Scene::Batch* sb = new Scene::Batch();
         
         for (Drawable* object : objects) {

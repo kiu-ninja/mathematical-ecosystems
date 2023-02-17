@@ -1,4 +1,4 @@
-#include "stage/scene/controller/infinite.hpp"
+#include "stage/scene.hpp"
 
 namespace Scene {
     namespace Controllers {

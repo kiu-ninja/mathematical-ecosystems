@@ -1,6 +1,6 @@
 #include "drawables.hpp"
 #include "drawing_functions.hpp"
-#include "stage/scene/controllers.hpp"
+#include "stage/scene.hpp"
 
 using namespace Drawables;
 

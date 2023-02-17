@@ -6,7 +6,7 @@
 #include "vectors.hpp"
 #include "circle.hpp"
 #include "single_field_interpolation.hpp"
-#include "stage/scene/instant_builder.hpp"
+#include "stage/scene.hpp"
 
 namespace Drawables {
     Rectangle padded_rectangle(const Rectangle &rect, const float &padding);
@@ -59,21 +59,39 @@ namespace Drawables {
             return (T*)objects[i];
         };
         /* Animates the group translating with a given offset. */
-        Scene::InstantBuilder* translate(const Vector2 &offset) override;
+        Scene::Builders::Instant* translate(const Vector2 &offset) override;
         /* Animates the drawable scaling with a given factor. */
-        Scene::InstantBuilder* scale(const float &factor) override;
+        Scene::Builders::Instant* scale(const float &factor, const Vector2 &pivot);
         /* Animates the group scaling with a given vector.
 
         The group will get scaled by factor.x in the x dimension and factor.y in the y dimension. */
-        Scene::InstantBuilder* scale(const Vector2 &factor) override;
+        Scene::Builders::Instant* scale(const Vector2 &factor, const Vector2 &pivot);
+        /* Animates the drawable scaling with a given factor. */
+        Scene::Builders::Instant* scale(const float &factor) override;
+        /* Animates the group scaling with a given vector.
+
+        The group will get scaled by factor.x in the x dimension and factor.y in the y dimension. */
+        Scene::Builders::Instant* scale(const Vector2 &factor) override;
         /* Animates the distance between group objects scaling with a given factor. */
-        Scene::InstantBuilder* space_out(const float &factor);
+        Scene::Builders::Instant* space_out(const float &factor);
         /* Animates the distance between group objects scaling with a given vector.
 
         The distance btween group objects will get scaled by factor.x in the x dimension and factor.y in the y dimension. */
-        Scene::InstantBuilder* space_out(const Vector2 &factor);
+        Scene::Builders::Instant* space_out(const Vector2 &factor);
         /* Draws the drawable to the window. */
         void draw() override;
+    };
+
+    struct Ellipse: public Drawable {
+        Color stroke_col = WHITE;
+        Color fill_col = WHITE;
+        float visibility = 0;
+
+        Ellipse(float x, float y, float w, float h) : Drawable(Vector2 { x, y }, Vector2 { w, h }) {}
+
+        virtual Vector2 closest_point(Vector2 point) override;
+
+        virtual void draw() override;
     };
 
     //

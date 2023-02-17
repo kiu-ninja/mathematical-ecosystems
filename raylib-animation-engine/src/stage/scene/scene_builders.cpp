@@ -1,8 +1,8 @@
-#include "stage/scene/builders.hpp"
+#include "stage/scene.hpp"
 
 namespace Scene {
-    Builder* Builders::waiting_for(Scene* scene, Controller* waiting_for) {
-        Builder* sb = new Builder([=](){
+    Builders::Builder* Builders::waiting_for(Scene* scene, Controller* waiting_for) {
+        Builders::Builder* sb = new Builders::Builder([=](){
             return scene;
         });
         
@@ -11,9 +11,9 @@ namespace Scene {
         return sb;
     }
 
-    InstantBuilder* Builders::instant(std::function<Scene *()> f)
+    Builders::Instant* Builders::instant(std::function<Scene *()> f)
     {
-        return new InstantBuilder(f);
+        return new Instant(f);
     }
 
     InstantExecutor* Builders::executor(std::function<void()> f)

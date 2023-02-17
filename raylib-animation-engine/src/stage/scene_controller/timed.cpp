@@ -1,5 +1,5 @@
 #include <iostream>
-#include "stage/scene/controller/timed.hpp"
+#include "stage/scene.hpp"
 
 namespace Scene {
     namespace Controllers {

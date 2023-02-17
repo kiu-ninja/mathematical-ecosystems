@@ -1,5 +1,5 @@
 #include <vector>
-#include "stage/scene/scene.hpp"
+#include "stage/scene.hpp"
 
 namespace Scene {
 

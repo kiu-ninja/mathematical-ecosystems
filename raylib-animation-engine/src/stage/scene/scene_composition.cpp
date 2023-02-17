@@ -1,6 +1,6 @@
 #include <vector>
-#include "stage/scene/composition.hpp"
-#include "stage/scene/controller/composition.hpp"
+#include "stage/scene.hpp"
+#include "stage/scene.hpp"
 
 namespace Scene {
     Composition::Composition() {

@@ -1,4 +1,4 @@
-#include "stage/scene/scene.hpp"
+#include "stage/scene.hpp"
 #include "easing.hpp"
 
 namespace Interpolate {

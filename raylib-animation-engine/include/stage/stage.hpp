@@ -1,9 +1,7 @@
 #pragma once
+#include "stage/scene.hpp"
 #include <iostream>
 #include <vector>
-#include "stage/scene/scene.hpp"
-#include "stage/scene/composition.hpp"
-#include "stage/scene/controller/infinite.hpp"
 
 // ================
 
@@ -17,7 +15,8 @@ private:
     void set_last_scene_controller(Scene::Controller* scene_controller);
 
 public:
-    Stage() {
+    Stage()
+    {
         scene_composition = new Scene::Composition();
         scene_composition->set_scene_controller(new Scene::Controllers::Infinite());
     }

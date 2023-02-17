@@ -1,8 +1,8 @@
 #include <iostream>
 #include <vector>
 #include "stage/stage.hpp"
-#include "stage/scene/instant_builder.hpp"
-#include "stage/scene/builders.hpp"
+#include "stage/scene.hpp"
+#include "stage/scene.hpp"
 
 void Stage::scene_update() {
     Scene::Controller* sc_sc = scene_composition->get_scene_controller();

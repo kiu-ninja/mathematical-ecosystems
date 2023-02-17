@@ -1,4 +1,4 @@
-#include "stage/scene/controller/composition.hpp"
+#include "stage/scene.hpp"
 
 namespace Scene {
     namespace Controllers {
