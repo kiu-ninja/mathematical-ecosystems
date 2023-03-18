@@ -18,6 +18,7 @@ if (NOT raylib_FOUND) # If there's none, fetch and build raylib
   endif()
 endif()
 
+set(CMAKE_C_COMPILER "C:/Program\ Files\ (x86)/Embarcadero/Dev-Cpp/TDM-GCC-64/bin/gcc")
 set(CMAKE_CXX_STANDARD 11) # Requires C11 standard
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
 
